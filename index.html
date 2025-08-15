@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ตารางกะ + OT — v4 (Drag & Drop + Pay Slip)</title>
+  <style>
+    :root{
+      --bg:#f7f8fb; --text:#0b1220; --muted:#6b7280; --card:#fff; --line:#e5e9f2;
+      --accent:#2563eb; --accent-2:#1e40af; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+      --shadow:0 10px 30px rgba(18,41,76,.08);
+      --chip-off:#f3f4f6; --chip-s1:#dbeafe; --chip-s2:#e0e7ff; --chip-full:#dcfce7; --chip-mgr:#fde68a;
+      --hole:#ef4444; --cover:#10b981; --today:#fff7ed;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1200px;margin:0 auto;padding:10px 12px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:10}
+    .h-left,.h-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .h-title{font-weight:800}
+    button,select,input{border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 10px;font-weight:600;cursor:pointer}
+    button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    button.ghost{background:#fff}
+    button.icon{padding:8px 10px;font-weight:900}
+    .toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff}
+    .banner{padding:8px 10px;border-radius:10px;margin:8px 0;font-weight:600}
+    .banner.ok{background:#ecfdf5;border:1px dashed #86efac;color:#047857}
+    .banner.warn{background:#fff7ed;border:1px dashed #fdba74;color:#a16207}
+    .note{color:var(--muted);font-size:13px}
+    .legend .pill{display:inline-block;margin-right:6px;border:1px solid var(--line);border-radius:999px;padding:3px 8px;background:#fff;font-size:12px}
+    /* Palette */
+    .palette{display:flex;gap:6px;align-items:center}
+    .pchip{border:1px dashed var(--line);border-radius:999px;padding:6px 10px;background:#fff;user-select:none}
+    .pchip.off{background:var(--chip-off)} .pchip.s1{background:var(--chip-s1)} .pchip.s2{background:var(--chip-s2)} .pchip.full{background:var(--chip-full)}
+    /* Calendar */
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:8px 0 16px}
+    .dow{font-weight:700;color:#334155;text-align:center}
+    .cell{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;min-height:130px;display:flex;flex-direction:column;gap:6px;position:relative}
+    .cell.hollow{background:#f1f5f9}
+    .cell.today{outline:2px dashed #fdba74;background:var(--today)}
+    .dayhead{display:flex;justify-content:space-between;align-items:center}
+    .daynum{font-weight:800}
+    .indicator{width:10px;height:10px;border-radius:50%}
+    .covered{background:var(--cover)} .hole{background:var(--hole)}
+    .chips{display:flex;gap:6px;flex-direction:column}
+    .chip{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:13px}
+    .chip .left{display:flex;gap:6px;align-items:center}
+    .role{font-weight:700;color:#334155}
+    .shift{font-weight:700}
+    .off{background:var(--chip-off)} .s1{background:var(--chip-s1)} .s2{background:var(--chip-s2)} .full{background:var(--chip-full)}
+    .more{position:absolute;top:8px;right:8px;border:none;background:transparent;font-size:18px;cursor:pointer}
+    .drop-hint{border:2px dashed #60a5fa}
+    /* Drawer */
+    .drawer{position:fixed;top:0;right:-420px;width:400px;height:100%;background:#fff;border-left:1px solid var(--line);box-shadow:var(--shadow);transition:right .25s ease;z-index:50;display:flex;flex-direction:column}
+    .drawer.open{right:0}
+    .drawer header{position:unset;background:#fff;padding:12px;border-bottom:1px solid var(--line)}
+    .drawer .body{padding:12px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .opt{flex:1 1 45%;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .opt h4{margin:0;font-size:13px}
+    .opt .btns{display:flex;gap:6px;flex-wrap:wrap}
+    .opt .btns button{flex:1}
+    textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .drawer footer{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+    /* Bottom summary */
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 20px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px}
+    .card h3{margin:0 0 6px;font-size:14px;color:#334155}
+    .card .v{font-size:14px;line-height:1.5}
+    .badgeln{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;background:#fff;font-size:12px}
+    .badge.ok{border-color:#a7f3d0} .badge.bad{border-color:#fecaca}
+    @media (max-width:1000px){ .summary{grid-template-columns:1fr} .drawer{width:100%} }
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:70}
+    .modal .box{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);width:95%;max-width:900px;padding:12px}
+    .tabs{display:flex;gap:6px;margin-bottom:8px}
+    .tab{border:1px solid var(--line);border-radius:999px;padding:6px 10px;cursor:pointer;background:#fff}
+    .tab.active{background:#dbeafe;border-color:#93c5fd}
+    .pslip{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .pslip .sec{border:1px solid var(--line);border-radius:10px;padding:10px}
+    .pslip h4{margin:0 0 8px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .right{text-align:right}
+    .ps-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    @media print{
+      header,.banner,.legend,.summary,.drawer,.modal:not(.printable),.h-right{display:none!important}
+      .wrap{max-width:none}
+      .pslip{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="h-left">
+      <button id="prev" class="icon">‹</button>
+      <div class="h-title" id="title">เดือน ปี</div>
+      <button id="next" class="icon">›</button>
+      <button id="today" class="ghost">วันนี้</button>
+      <div class="palette">
+        <span class="note">ลากกะ:</span>
+        <div class="pchip off" draggable="true" data-shift="Off">Off</div>
+        <div class="pchip s1" draggable="true" data-shift="S1">S1</div>
+        <div class="pchip s2" draggable="true" data-shift="S2">S2</div>
+        <div class="pchip full" draggable="true" data-shift="Full">Full</div>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="toggle"><input type="checkbox" id="useMgr"><label for="useMgr">ผู้จัดการสำรอง</label></div>
+      <button id="auto" class="primary">Auto 4 Off/คน + ผูก Full</button>
+      <div class="toggle"><input type="checkbox" id="emg"><label for="emg">Emergency Off</label></div>
+      <button id="pslip" class="ghost">Pay Slip</button>
+      <button id="save" class="ghost">บันทึก</button>
+      <button id="load" class="ghost">โหลด</button>
+      <button id="reset" class="ghost">รีเซ็ต</button>
+      <button id="export" class="ghost">ส่งออก CSV</button>
+      <button id="print" class="ghost">พิมพ์</button>
+      <button id="gear" class="ghost">⚙ ตั้งชื่อ</button>
+    </div>
+  </header>
+
+  <div id="fair" class="banner ok">ยุติธรรมดี — วันหยุดคนละ 4 วัน และจำนวน Full ใกล้กัน</div>
+  <div class="note legend">สี: <span class="pill" style="background:#f3f4f6">Off</span> <span class="pill" style="background:#dbeafe">S1</span> <span class="pill" style="background:#e0e7ff">S2</span> <span class="pill" style="background:#dcfce7">Full</span> • ลาก “ชิปกะ” ไปวางบนชื่อ A/B/M</div>
+
+  <div class="calendar" id="dow"></div>
+  <div class="calendar" id="grid"></div>
+
+  <div class="summary">
+    <div class="card">
+      <h3 id="aHead">สรุป — พนักงาน A</h3>
+      <div class="v" id="aMeta"></div>
+    </div>
+    <div class="card">
+      <h3 id="bHead">สรุป — พนักงาน B</h3>
+      <div class="v" id="bMeta"></div>
+    </div>
+    <div class="card">
+      <h3 id="sHead">ภาพรวมร้าน</h3>
+      <div class="v" id="storeMeta"></div>
+      <div class="badgeln" id="badges"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer" id="drawer">
+  <header>
+    <div id="dTitle">รายละเอียดวันที่</div>
+    <div class="note" id="dSub"></div>
+  </header>
+  <div class="body">
+    <div class="row">
+      <div class="opt">
+        <h4 id="nameA">พนักงาน A</h4>
+        <div class="btns">
+          <button class="ghost" data-role="A" data-val="Off">Off</button>
+          <button class="ghost" data-role="A" data-val="S1">S1</button>
+          <button class="ghost" data-role="A" data-val="S2">S2</button>
+          <button class="ghost" data-role="A" data-val="Full">Full</button>
+        </div>
+      </div>
+      <div class="opt">
+        <h4 id="nameB">พนักงาน B</h4>
+        <div class="btns">
+          <button class="ghost" data-role="B" data-val="Off">Off</button>
+          <button class="ghost" data-role="B" data-val="S1">S1</button>
+          <button class="ghost" data-role="B" data-val="S2">S2</button>
+          <button class="ghost" data-role="B" data-val="Full">Full</button>
+        </div>
+      </div>
+    </div>
+    <div class="row" id="mgrBox" style="display:none">
+      <div class="opt" style="flex:1 1 100%">
+        <h4 id="nameM">ผู้จัดการ</h4>
+        <div class="btns">
+          <button class="ghost" data-role="M" data-val="Off">Off</button>
+          <button class="ghost" data-role="M" data-val="S1">S1</button>
+          <button class="ghost" data-role="M" data-val="S2">S2</button>
+          <button class="ghost" data-role="M" data-val="Full">Full</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <label class="note">หมายเหตุในวันนั้น</label>
+      <textarea id="dNote" placeholder="เหตุผล/รายละเอียด (เช่น หยุดฉุกเฉิน, แลกกะ, ไปธุระ)"></textarea>
+    </div>
+  </div>
+  <footer>
+    <button id="apply" class="primary">บันทึก</button>
+    <button id="close" class="ghost">ปิด</button>
+  </footer>
+</div>
+
+<!-- Settings modal -->
+<div id="settings" class="modal">
+  <div class="box">
+    <h3>ตั้งค่าชื่อ</h3>
+    <div class="row">
+      <div class="col" style="flex:1 1 100%"><label>พนักงาน A</label><input id="inpA" value="พนักงาน A"></div>
+      <div class="col" style="flex:1 1 100%"><label>พนักงาน B</label><input id="inpB" value="พนักงาน B"></div>
+      <div class="col" style="flex:1 1 100%"><label>ผู้จัดการ</label><input id="inpM" value="ผู้จัดการ"></div>
+    </div>
+    <div class="ps-actions">
+      <button id="setOk" class="primary">บันทึก</button>
+      <button id="setCancel" class="ghost">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pay Slip modal -->
+<div id="psModal" class="modal printable">
+  <div class="box">
+    <h3>Pay Slip (อ้างอิง — สำหรับผู้จัดการ)</h3>
+    <div class="row" style="align-items:center;gap:8px">
+      <div class="col" style="flex:1 1 40%"><label>บริษัท/ร้าน</label><input id="psCompany" placeholder="ชื่อร้าน/บริษัท"></div>
+      <div class="col" style="flex:1 1 30%"><label>งวดเดือน</label><input id="psMonth" readonly></div>
+      <div class="col" style="flex:1 1 30%"><label>วันที่พิมพ์</label><input id="psDate" readonly></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="A" id="tabA"></div>
+      <div class="tab" data-tab="B" id="tabB"></div>
+    </div>
+    <div id="pslipA" class="pslip"></div>
+    <div id="pslipB" class="pslip" style="display:none"></div>
+    <div class="ps-actions">
+      <button id="psExport" class="ghost">ส่งออก CSV</button>
+      <button onclick="window.print()" class="primary">พิมพ์ Pay Slip</button>
+      <button id="psClose" class="ghost">ปิด</button>
+    </div>
+    <div class="note">* แบบฟอร์มนี้เป็นตัวอย่างอ้างอิง: แสดงรายการมาตรฐาน (วันทำงาน, ชม., OT, เบี้ยขยัน/อื่น ๆ, หักขาด-ลา-มาสาย ฯลฯ) — ไม่ผูกกับกฎหมายโดยตรง</div>
+  </div>
+</div>
+
+<script>
+// Hidden backend for rates (ไม่แสดงหน้า UI)
+const CONFIG={ daily:374.46, normalH:8, otX:1.5, fullNet:12.5, mgrDaily:500 };
+const SHIFTS=['Off','S1','S2','Full'];
+const STORAGE='shift_v4_drag_pslip';
+const $=id=>document.getElementById(id);
+const thMonths=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const thDow=["อา","จ","อ","พ","พฤ","ศ","ส"];
+let state={ ym:"", useMgr:false, names:{A:"พนักงาน A",B:"พนักงาน B",M:"ผู้จัดการ"}, notes:{}, shifts:{} };
+
+// ==== Init ====
+(function init(){
+  const now=new Date(); state.ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  buildDow(); buildMonth(state.ym); hookEvents(); updateTitle();
+  initPaletteDnD();
+})();
+
+function hookEvents(){
+  $('prev').onclick=()=>changeMonth(-1);
+  $('next').onclick=()=>changeMonth(1);
+  $('today').onclick=()=>{ const n=new Date(); buildMonth(`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`); };
+  $('auto').onclick=autoDistribute;
+  $('useMgr').onchange=()=>{ state.useMgr=$('useMgr').checked; buildMonth(state.ym); };
+  $('save').onclick=save; $('load').onclick=load;
+  $('reset').onclick=()=>{ if(confirm('รีเซ็ตทั้งเดือน?')){ localStorage.removeItem(STORAGE); buildMonth(state.ym);} };
+  $('export').onclick=exportCSV; $('print').onclick=()=>window.print();
+  $('gear').onclick=()=>openSettings(); $('setOk').onclick=applySettings; $('setCancel').onclick=()=>modal('settings',false);
+  $('pslip').onclick=openPaySlip; $('psClose').onclick=()=>modal('psModal',false);
+  document.querySelectorAll('.opt .btns button').forEach(b=> b.addEventListener('click',()=>{
+    const role=b.dataset.role, val=b.dataset.val; const dkey=$('drawer').dataset.day; setShift(dkey,role,val); paintCell(dkey); updateSummary();
+  }));
+  $('apply').onclick=()=>{ const k=$('drawer').dataset.day; state.notes[k]=$('dNote').value; modalDrawer(false); save(); };
+  $('close').onclick=()=>modalDrawer(false);
+}
+
+function buildDow(){ const head=$('dow'); head.innerHTML=""; thDow.forEach(d=>{ const el=document.createElement('div'); el.className='dow'; el.textContent=d; head.appendChild(el); }); }
+
+function buildMonth(ym){
+  state.ym=ym; updateTitle();
+  const [y,m]=ym.split('-').map(Number);
+  const first=new Date(y,m-1,1), firstDow=first.getDay(), dim=new Date(y,m,0).getDate();
+  const grid=$('grid'); grid.innerHTML="";
+  const totalCells=Math.ceil((firstDow+dim)/7)*7;
+  for(let c=0;c<totalCells;c++){
+    const day=c-firstDow+1;
+    const cell=document.createElement('div');
+    cell.className="cell"+((day<1||day>dim)?' hollow':'');
+    if(day>=1 && day<=dim){
+      const dkey = dateKey(y,m,day); cell.dataset.day=dkey;
+      if(isToday(y,m,day)) cell.classList.add('today');
+      const more=document.createElement('button'); more.className='more'; more.innerHTML='⋯'; more.title='รายละเอียด'; more.onclick=(ev)=>{ ev.stopPropagation(); openDrawer(dkey); };
+      const head=document.createElement('div'); head.className='dayhead';
+      const num=document.createElement('div'); num.className='daynum'; num.textContent=day;
+      const indicator=document.createElement('div'); indicator.className='indicator'; indicator.id=`ind-${dkey}`;
+      head.appendChild(num); head.appendChild(indicator); cell.appendChild(head); cell.appendChild(more);
+      const chips=document.createElement('div'); chips.className='chips';
+      chips.appendChild(makeChip(dkey,'A')); chips.appendChild(makeChip(dkey,'B')); if(state.useMgr) chips.appendChild(makeChip(dkey,'M'));
+      const warn=document.createElement('div'); warn.className='note'; warn.id=`warn-${dkey}`;
+      cell.appendChild(chips); cell.appendChild(warn);
+      longPress(cell, ()=>openDrawer(dkey));
+    }
+    grid.appendChild(cell);
+  }
+  // defaults
+  for(let d=1; d<=dim; d++){
+    const k=dateKey(y,m,d);
+    if(!state.shifts[k]) state.shifts[k]={A: d%2?'S1':'S2', B: d%2?'S2':'S1', M:'Off'};
+    paintCell(k);
+  }
+  updateSummary();
+}
+
+function updateTitle(){
+  const [y,m]=state.ym.split('-').map(Number);
+  $('title').textContent = `${thMonths[m-1]} ${y}`;
+  $('aHead').textContent='สรุป — '+state.names.A;
+  $('bHead').textContent='สรุป — '+state.names.B;
+}
+
+function isToday(y,m,d){ const n=new Date(); return n.getFullYear()===y && (n.getMonth()+1)===m && n.getDate()===d; }
+function dateKey(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function makeChip(k, role){
+  const chip=document.createElement('div'); chip.className='chip off';
+  chip.dataset.role=role; chip.dataset.day=k;
+  chip.addEventListener('dragover', (e)=>{ e.preventDefault(); chip.classList.add('drop-hint'); });
+  chip.addEventListener('dragleave', ()=>chip.classList.remove('drop-hint'));
+  chip.addEventListener('drop', (e)=>{ e.preventDefault(); const shift=e.dataTransfer.getData('text/plain'); setShift(k,role,shift); paintCell(k); updateSummary(); chip.classList.remove('drop-hint'); });
+  const left=document.createElement('div'); left.className='left';
+  const roleSpan=document.createElement('span'); roleSpan.className='role'; roleSpan.id=`name-${role}-${k}`; roleSpan.textContent=state.names[role];
+  const sep=document.createTextNode(' — ');
+  const shiftSpan=document.createElement('span'); shiftSpan.className='shift'; shiftSpan.id=`shift-${role}-${k}`; shiftSpan.textContent='Off';
+  left.appendChild(roleSpan); left.appendChild(sep); left.appendChild(shiftSpan);
+  chip.appendChild(left);
+  // keep click cycle as fallback for desktop-only
+  chip.onclick=(ev)=>{ if(document.body.dataset.dragging==='1') return; const emg=$('emg').checked; if(emg&&(role==='A'||role==='B')) emergencyOff(k,role); else cycle(k,role); };
+  return chip;
+}
+
+function cycle(k, role){
+  const cur=state.shifts[k]?.[role] || 'Off';
+  const next=SHIFTS[(SHIFTS.indexOf(cur)+1)%SHIFTS.length];
+  setShift(k,role,next); paintCell(k); updateSummary();
+}
+
+function initPaletteDnD(){
+  document.querySelectorAll('.pchip').forEach(p=>{
+    p.addEventListener('dragstart', (e)=>{ document.body.dataset.dragging='1'; e.dataTransfer.setData('text/plain', p.dataset.shift); });
+    p.addEventListener('dragend', ()=>{ document.body.dataset.dragging='0'; });
+  });
+}
+
+function setShift(k, role, val){
+  if(!state.shifts[k]) state.shifts[k]={A:'Off',B:'Off',M:'Off'};
+  state.shifts[k][role]=val;
+}
+
+function paintCell(k){
+  const r=state.shifts[k]; if(!r) return;
+  paintChip(k,'A',r.A); paintChip(k,'B',r.B); if(state.useMgr) paintChip(k,'M',r.M||'Off');
+  const ok=(r.A==='Full'||r.B==='Full'||((r.A==='S1'||r.A==='S2')&&(r.B==='S1'||r.B==='S2')));
+  const ind=$('ind-'+k); if(ind) ind.className='indicator '+(ok?'covered':'hole');
+  const warn=$('warn-'+k); if(warn) warn.textContent = ok? '' : '⚠ ครอบคลุมไม่เต็มวัน';
+}
+
+function paintChip(k, role, shift){
+  const sEl=$('shift-'+role+'-'+k); if(!sEl) return;
+  sEl.textContent=shift;
+  const chip=sEl.closest('.chip'); chip.classList.remove('off','s1','s2','full');
+  if(shift==='Off') chip.classList.add('off'); if(shift==='S1') chip.classList.add('s1');
+  if(shift==='S2') chip.classList.add('s2'); if(shift==='Full') chip.classList.add('full');
+  $('name-'+role+'-'+k).textContent = state.names[role];
+}
+
+function longPress(el, cb){ let t; const start=()=>{ t=setTimeout(cb,500); }; const cancel=()=>clearTimeout(t);
+  el.addEventListener('mousedown', start); el.addEventListener('touchstart', start);
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, cancel));
+}
+
+function emergencyOff(k, role){
+  const other=role==='A'?'B':'A';
+  setShift(k, role, 'Off'); if((state.shifts[k][other]||'Off')!=='Full') setShift(k, other, 'Full');
+  if(state.useMgr){ const a=state.shifts[k].A, b=state.shifts[k].B; setShift(k,'M', (a==='Off'&&b==='Off')?'Full':'Off'); }
+  paintCell(k); updateSummary();
+}
+
+// Drawer
+function openDrawer(k){
+  $('drawer').dataset.day=k;
+  const d=new Date(k); $('dTitle').textContent=d.toLocaleDateString('th-TH',{weekday:'long',day:'2-digit',month:'short',year:'numeric'});
+  $('dSub').textContent='แตะปุ่มเพื่อกำหนดกะ และบันทึกหมายเหตุ';
+  $('mgrBox').style.display=state.useMgr?'':'none';
+  $('dNote').value=state.notes[k]||'';
+  modalDrawer(true);
+}
+function modalDrawer(show){ const dr=$('drawer'); if(show) dr.classList.add('open'); else dr.classList.remove('open'); }
+
+// Summary
+function updateSummary(){
+  const [y,m]=state.ym.split('-').map(Number);
+  const dim=new Date(y,m,0).getDate();
+  const agg={A:{days:0,off:0,full:0,s1:0,s2:0,hrs:0,ot:0}, B:{days:0,off:0,full:0,s1:0,s2:0,hrs:0,ot:0}, M:{days:0,off:0,full:0,hrs:0,ot:0}};
+  let covered=0, holes=0, offFull=0;
+  for(let d=1; d<=dim; d++){
+    const k=dateKey(y,m,d); const r=state.shifts[k]; if(!r) continue;
+    const ra=toHours(r.A), rb=toHours(r.B), rm=toHours(r.M||'Off');
+    count(agg.A,r.A,ra); count(agg.B,r.B,rb); if(state.useMgr) count(agg.M,r.M||'Off',rm);
+    const ok=(r.A==='Full'||r.B==='Full'||((r.A==='S1'||r.A==='S2')&&(r.B==='S1'||r.B==='S2')));
+    if(ok) covered++; else holes++;
+    if((r.A==='Off'&&r.B==='Full')||(r.B==='Off'&&r.A==='Full')) offFull++;
+  }
+  const msgs=[];
+  if(agg.A.off!==4 || agg.B.off!==4) msgs.push(`วันหยุด A/B = ${agg.A.off}/${agg.B.off} (ควร 4/4)`);
+  if(Math.abs(agg.A.full-agg.B.full)>1) msgs.push(`Full A/B = ${agg.A.full}/${agg.B.full} (ควรใกล้กัน)`);
+  $('fair').className='banner '+(msgs.length?'warn':'ok');
+  $('fair').textContent = msgs.length? '⚠ ไม่ยุติธรรม: '+msgs.join(' • ') : 'ยุติธรรมดี — วันหยุดคนละ 4 วัน และจำนวน Full ใกล้กัน';
+  $('aHead').textContent='สรุป — '+state.names.A; $('bHead').textContent='สรุป — '+state.names.B;
+  $('aMeta').innerHTML=`ทำงาน <b>${agg.A.days}</b> • Off <b>${agg.A.off}</b> • S1 <b>${agg.A.s1}</b> • S2 <b>${agg.A.s2}</b> • Full <b>${agg.A.full}</b><br>ชั่วโมงรวม <b>${agg.A.hrs.toFixed(1)}</b> • OT รวม <b>${agg.A.ot.toFixed(1)}</b>`;
+  $('bMeta').innerHTML=`ทำงาน <b>${agg.B.days}</b> • Off <b>${agg.B.off}</b> • S1 <b>${agg.B.s1}</b> • S2 <b>${agg.B.s2}</b> • Full <b>${agg.B.full}</b><br>ชั่วโมงรวม <b>${agg.B.hrs.toFixed(1)}</b> • OT รวม <b>${agg.B.ot.toFixed(1)}</b>`;
+  $('storeMeta').innerHTML=`ครอบคลุมครบวัน <b>${covered}</b> / ${dim} • รูรั่ว <b>${holes}</b> • Off+Full <b>${offFull}</b><br>ผู้จัดการลงงาน <b>${agg.M.days}</b> วัน • ชม.รวม <b>${agg.M.hrs.toFixed(1)}</b> • OT รวม <b>${agg.M.ot.toFixed(1)}</b>`;
+  const badges=$('badges'); badges.innerHTML='';
+  addBadge(badges, `Off A/B = ${agg.A.off}/${agg.B.off}`, (agg.A.off===4 && agg.B.off===4));
+  addBadge(badges, `Full A/B = ${agg.A.full}/${agg.B.full}`, (Math.abs(agg.A.full-agg.B.full)<=1));
+  addBadge(badges, `ครอบคลุมครบ = ${covered}/${dim}`, holes===0);
+  if(state.useMgr && agg.M.days>0) addBadge(badges, `Mgr ใช้งาน ${agg.M.days} วัน`, true);
+}
+
+function toHours(shift){
+  if(shift==='Off' || !shift) return {h:0,ot:0};
+  if(shift==='S1'||shift==='S2') return {h:CONFIG.normalH, ot:0};
+  if(shift==='Full') return {h:CONFIG.fullNet, ot:Math.max(CONFIG.fullNet-CONFIG.normalH,0)};
+  return {h:0,ot:0};
+}
+function count(dst, shift, r){ if(shift!=='Off') dst.days++; else dst.off++; if(shift==='S1') dst.s1++; if(shift==='S2') dst.s2++; if(shift==='Full') dst.full++; dst.hrs+=r.h; dst.ot+=r.ot; }
+function addBadge(parent,text,ok){ const b=document.createElement('span'); b.className='badge '+(ok?'ok':'bad'); b.textContent=text; parent.appendChild(b); }
+
+// Auto
+function autoDistribute(){
+  const [y,m]=state.ym.split('-').map(Number);
+  const dim=new Date(y,m,0).getDate();
+  const offsA=[], offsB=[];
+  for(let d=1; d<=dim && offsA.length<4; d++){ if(new Date(y,m-1,d).getDay()===0) offsA.push(d); }
+  for(let d=1; d<=dim && offsB.length<4; d++){ if(new Date(y,m-1,d).getDay()===3) offsB.push(d); }
+  for(let d=1; d<=dim && offsA.length<4; d++){ if(!offsA.includes(d) && !offsB.includes(d)) offsA.push(d); }
+  for(let d=1; d<=dim && offsB.length<4; d++){ if(!offsA.includes(d) && !offsB.includes(d)) offsB.push(d); }
+  for(let d=1; d<=dim; d++){
+    const k=dateKey(y,m,d);
+    if(offsA.includes(d)){ setShift(k,'A','Off'); setShift(k,'B','Full'); }
+    else if(offsB.includes(d)){ setShift(k,'B','Off'); setShift(k,'A','Full'); }
+    else { setShift(k,'A', d%2?'S1':'S2'); setShift(k,'B', d%2?'S2':'S1'); }
+    if(state.useMgr) setShift(k,'M','Off');
+    paintCell(k);
+  }
+  updateSummary(); save();
+}
+
+// Settings modal
+function openSettings(){ $('inpA').value=state.names.A; $('inpB').value=state.names.B; $('inpM').value=state.names.M; modal('settings',true); }
+function applySettings(){ state.names.A=$('inpA').value||'พนักงาน A'; state.names.B=$('inpB').value||'พนักงาน B'; state.names.M=$('inpM').value||'ผู้จัดการ';
+  document.querySelectorAll('[id^="name-"]').forEach(el=>{ const parts=el.id.split('-'); const role=parts[1]; el.textContent=state.names[role]; });
+  updateSummary(); modal('settings',false);
+}
+
+// Save/Load/Export
+function save(){ localStorage.setItem(STORAGE, JSON.stringify(state)); alert('บันทึกแล้ว'); }
+function load(){ const raw=localStorage.getItem(STORAGE); if(!raw){ alert('ยังไม่มีข้อมูลบันทึก'); return; } state=JSON.parse(raw); $('useMgr').checked=!!state.useMgr; buildMonth(state.ym||state.ym); updateTitle(); }
+function exportCSV(){
+  const rows=[['Date','Employee','Shift','Hours','OT_hours','Note']];
+  const [y,m]=state.ym.split('-').map(Number); const dim=new Date(y,m,0).getDate();
+  for(let d=1; d<=dim; d++){
+    const k=dateKey(y,m,d); const r=state.shifts[k]||{A:'Off',B:'Off',M:'Off'};
+    [['A',state.names.A,r.A],['B',state.names.B,r.B]].forEach(([role,name,shift])=>{ const h=toHours(shift); rows.push([k,name,shift,h.h,h.ot,state.notes[k]||'']); });
+    if(state.useMgr){ const h=toHours(r.M); rows.push([k,state.names.M,r.M,h.h,h.ot,state.notes[k]||'']); }
+  }
+  const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`shift_${state.ym}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// Pay Slip ======
+function openPaySlip(){
+  // Build slips for A/B based on current month
+  const [y,m]=state.ym.split('-').map(Number);
+  $('psMonth').value = `${thMonths[m-1]} ${y}`;
+  $('psDate').value = new Date().toLocaleDateString('th-TH');
+  $('tabA').textContent=state.names.A; $('tabB').textContent=state.names.B;
+  buildSlip('A'); buildSlip('B');
+  // tabs
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchSlip(t.dataset.tab));
+  switchSlip('A');
+  // export CSV
+  $('psExport').onclick=exportPaySlipCSV;
+  modal('psModal', true);
+}
+
+function buildSlip(role){
+  const box = $('pslip'+role);
+  box.innerHTML='';
+  const rec = calcMonthly(role);
+  // Skeleton
+  const sec1=document.createElement('div'); sec1.className='sec';
+  sec1.innerHTML = `<h4>ข้อมูลพนักงาน</h4>
+    <div class="grid2">
+      <div>ชื่อ: <b>${state.names[role]}</b></div><div>ตำแหน่ง: พนักงานประจำร้าน</div>
+      <div>งวด: ${$('psMonth').value}</div><div>ชั่วโมงปกติ/วัน: ${CONFIG.normalH}</div>
+    </div>`;
+  const sec2=document.createElement('div'); sec2.className='sec';
+  sec2.innerHTML = `<h4>สรุปเวลา</h4>
+    <div class="grid2">
+      <div>ทำงาน (วัน): <b>${rec.days}</b></div><div>Off (วัน): ${rec.off}</div>
+      <div>S1/S2 (วัน): ${rec.s1}/${rec.s2}</div><div>Full (วัน): ${rec.full}</div>
+      <div>ชั่วโมงรวม: <b>${rec.hrs.toFixed(1)}</b></div><div>OT รวม: <b>${rec.ot.toFixed(1)}</b></div>
+    </div>`;
+  const sec3=document.createElement('div'); sec3.className='sec';
+  sec3.innerHTML = `<h4>รายการรายได้/หัก (กำหนดเอง)</h4>
+    <div class="grid2">
+      <label>เบี้ยขยัน/อื่น ๆ</label><input type="number" step="0.01" id="allow_${role}" value="0">
+      <label>หัก (ขาด-ลา-มาสาย/อื่น)</label><input type="number" step="0.01" id="ded_${role}" value="0">
+    </div>
+    <div class="note">* ช่องนี้ให้ผู้จัดการกรอกเองตามจริง เพื่อออกสลิปอ้างอิง</div>`;
+  const sec4=document.createElement('div'); sec4.className='sec';
+  sec4.innerHTML = `<h4>อัตราอ้างอิง (ซ่อนใน UI ปกติ)</h4>
+    <div class="grid2">
+      <div>ค่าแรง/วัน (S1/S2): ${CONFIG.daily.toFixed(2)}</div><div>OT/ชม. (1.5×): ${(CONFIG.otX*(CONFIG.daily/CONFIG.normalH)).toFixed(2)}</div>
+      <div>Full OT/วัน (ชม.): ${(CONFIG.fullNet-CONFIG.normalH).toFixed(1)}</div><div>ชั่วโมงปกติ/วัน: ${CONFIG.normalH}</div>
+    </div>
+    <div class="note">หมายเหตุ: ส่วนนี้แค่ตัวอ้างอิงสำหรับคำนวณ ไม่แสดงในหน้าจอสรุปปกติ</div>`;
+  box.appendChild(sec1); box.appendChild(sec2); box.appendChild(sec3); box.appendChild(sec4);
+}
+
+function calcMonthly(role){
+  const [y,m]=state.ym.split('-').map(Number);
+  const dim=new Date(y,m,0).getDate();
+  const res={days:0,off:0,full:0,s1:0,s2:0,hrs:0,ot:0, payBase:0, payOT:0};
+  const otRate = CONFIG.otX*(CONFIG.daily/CONFIG.normalH);
+  for(let d=1; d<=dim; d++){
+    const k=dateKey(y,m,d); const s=(state.shifts[k]?.[role])||'Off';
+    if(s!=='Off') res.days++; else res.off++;
+    if(s==='S1'){ res.s1++; res.hrs+=CONFIG.normalH; res.payBase+=CONFIG.daily; }
+    if(s==='S2'){ res.s2++; res.hrs+=CONFIG.normalH; res.payBase+=CONFIG.daily; }
+    if(s==='Full'){ res.full++; res.hrs+=CONFIG.fullNet; const ot=CONFIG.fullNet-CONFIG.normalH; res.ot+=ot; res.payBase+=CONFIG.daily; res.payOT+=ot*otRate; }
+  }
+  return res;
+}
+
+function exportPaySlipCSV(){
+  const rows=[['Employee','Month','Days','Off','S1','S2','Full','Hours','OT_hours','Base','OT','Allowance','Deduction','Net']];
+  ['A','B'].forEach(role=>{
+    const r=calcMonthly(role); const allow=parseFloat($('allow_'+role)?.value||0)||0; const ded=parseFloat($('ded_'+role)?.value||0)||0;
+    const net=(r.payBase+r.payOT+allow-ded).toFixed(2);
+    rows.push([state.names[role], $('psMonth').value, r.days, r.off, r.s1, r.s2, r.full, r.hrs.toFixed(1), r.ot.toFixed(1), r.payBase.toFixed(2), r.payOT.toFixed(2), allow.toFixed(2), ded.toFixed(2), net]);
+  });
+  const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`payslip_${state.ym}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// Utils
+function modal(id, show){ const el=$(id); el.style.display=show?'flex':'none'; }
+function addBadge(parent,text,ok){ const b=document.createElement('span'); b.className='badge '+(ok?'ok':'bad'); b.textContent=text; parent.appendChild(b); }
+function longPress(el, cb){ let t; const start=()=>{ t=setTimeout(cb,500); }; const cancel=()=>clearTimeout(t);
+  el.addEventListener('mousedown', start); el.addEventListener('touchstart', start);
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, cancel));
+}
+function switchSlip(role){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab'+role).classList.add('active');
+  document.getElementById('pslipA').style.display = (role==='A')?'grid':'none';
+  document.getElementById('pslipB').style.display = (role==='B')?'grid':'none';
+}
+</script>
+</body>
+</html>
