@@ -26,7 +26,6 @@
             padding: 4px;
             padding-top: 28px;
         }
-        /* Added style for previous month's days */
         .other-month {
             background-color: #f8f9fa !important;
         }
@@ -169,8 +168,8 @@
                         <button id="auto-schedule-btn" class="action-btn">จัดตารางอัตโนมัติ</button>
                     </div>
                     <div class="flex items-center justify-center">
-                        <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <label for="toggle-salary-card" class="ml-2 block text-sm text-gray-900">แสดงการคำนวณค่าแรง</label>
+                         <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                         <label for="toggle-salary-card" class="ml-2 block text-sm text-gray-900">แสดงการคำนวณค่าแรง</label>
                     </div>
                     <div id="schedule-warnings" class="text-sm text-red-600 font-semibold text-center md:text-right"></div>
               </div>
@@ -219,7 +218,7 @@
               </div>
         </div>
 
-        <div id="calendar-container">
+        <div id="calendar-container" class="mt-4">
             <div class="grid grid-cols-7 text-center">
                 <div class="day-header">อาทิตย์</div>
                 <div class="day-header">จันทร์</div>
@@ -231,6 +230,25 @@
             </div>
             <div id="calendar-body" class="calendar-grid"></div>
         </div>
+
+        <!-- Save Button Section -->
+        <div class="mt-6 flex flex-col items-center">
+            <button id="save-schedule-btn" class="action-btn bg-green-600 hover:bg-green-700 w-full md:w-1/3">บันทึกตาราง</button>
+            <div id="save-status" class="text-xs text-gray-500 mt-2 h-4"></div>
+        </div>
+
+
+        <!-- History Card -->
+        <div id="history-card" class="mt-8 p-4 bg-gray-50 rounded-lg border">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">ประวัติการบันทึก</h3>
+                <button id="clear-history-btn" class="text-xs bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">ล้างประวัติทั้งหมด</button>
+            </div>
+            <div id="history-list" class="max-h-48 overflow-y-auto">
+                <!-- History items will be populated here by JavaScript -->
+            </div>
+        </div>
+
     </div>
 
 <script>
@@ -246,8 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMonth = now.getMonth();
     let employeeNameA = 'สมชาย';
     let employeeNameB = 'สมหญิง';
-    let preferredOffDayA = 1; // 0=Sun, 1=Mon...
-    let preferredOffDayB = 3; // 3=Wed
+    let preferredOffDayA = 1;
+    let preferredOffDayB = 3;
     let scheduleData = [];
     let dailyWageA = 374;
     let otHourlyWageA = 70;
@@ -268,8 +286,146 @@ document.addEventListener('DOMContentLoaded', () => {
     const otWageInputA = document.getElementById('ot-wage-input-a');
     const dailyWageInputB = document.getElementById('daily-wage-input-b');
     const otWageInputB = document.getElementById('ot-wage-input-b');
+    const saveScheduleBtn = document.getElementById('save-schedule-btn');
+    const saveStatus = document.getElementById('save-status');
+    const historyList = document.getElementById('history-list');
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
 
     // ---- FUNCTIONS ----
+
+    function getStorageKey(year, month) {
+        return `schedule_${year}_${month}`;
+    }
+
+    function updateSaveStatus(statusText, isSaved = false) {
+        if (isSaved) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            saveStatus.textContent = `บันทึกล่าสุด: วันนี้, ${timeString}`;
+            saveStatus.classList.remove('text-red-500', 'font-semibold');
+            saveStatus.classList.add('text-gray-500');
+        } else {
+            saveStatus.textContent = statusText;
+            saveStatus.classList.add('text-red-500', 'font-semibold');
+            saveStatus.classList.remove('text-gray-500');
+        }
+    }
+    
+    function saveSchedule() {
+        const key = getStorageKey(currentYear, currentMonth);
+        const dataToSave = {
+            scheduleData: scheduleData,
+            employeeNameA: nameInputA.value,
+            employeeNameB: nameInputB.value,
+            preferredOffDayA: parseInt(offDaySelectA.value),
+            preferredOffDayB: parseInt(offDaySelectB.value),
+            dailyWageA: parseFloat(dailyWageInputA.value) || 0,
+            otHourlyWageA: parseFloat(otWageInputA.value) || 0,
+            dailyWageB: parseFloat(dailyWageInputB.value) || 0,
+            otHourlyWageB: parseFloat(otWageInputB.value) || 0,
+        };
+
+        try {
+            localStorage.setItem(key, JSON.stringify(dataToSave));
+            updateSaveStatus('', true);
+            populateHistoryCard(); // Update history list after saving
+        } catch (e) {
+            console.error("Error saving to localStorage", e);
+            updateSaveStatus('ผิดพลาด: ไม่สามารถบันทึกได้');
+        }
+    }
+
+    function loadSchedule(year, month) {
+        const key = getStorageKey(year, month);
+        const savedDataString = localStorage.getItem(key);
+
+        if (savedDataString) {
+            try {
+                const savedData = JSON.parse(savedDataString);
+                
+                scheduleData = savedData.scheduleData;
+                scheduleData.forEach(d => d.fullDate = new Date(d.fullDate));
+
+                nameInputA.value = savedData.employeeNameA;
+                nameInputB.value = savedData.employeeNameB;
+                offDaySelectA.value = savedData.preferredOffDayA;
+                offDaySelectB.value = savedData.preferredOffDayB;
+                dailyWageInputA.value = savedData.dailyWageA;
+                otWageInputA.value = savedData.otHourlyWageA;
+                dailyWageInputB.value = savedData.dailyWageB;
+                otWageInputB.value = savedData.otHourlyWageB;
+                
+                // Also update the state variables
+                employeeNameA = savedData.employeeNameA;
+                employeeNameB = savedData.employeeNameB;
+                preferredOffDayA = savedData.preferredOffDayA;
+                preferredOffDayB = savedData.preferredOffDayB;
+                dailyWageA = savedData.dailyWageA;
+                otHourlyWageA = savedData.otHourlyWageA;
+                dailyWageB = savedData.dailyWageB;
+                otHourlyWageB = savedData.otHourlyWageB;
+
+                updateSaveStatus('โหลดข้อมูลที่บันทึกไว้แล้ว');
+                setTimeout(() => updateSaveStatus('', true), 1500);
+
+                return true;
+            } catch (e) {
+                console.error("Error loading or parsing data from localStorage", e);
+                return false;
+            }
+        }
+        updateSaveStatus('ยังไม่มีข้อมูลที่บันทึกไว้สำหรับรอบนี้');
+        return false;
+    }
+
+    function populateHistoryCard() {
+        historyList.innerHTML = '';
+        const savedSchedules = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('schedule_')) {
+                const parts = key.split('_');
+                if (parts.length === 3) {
+                    const year = parseInt(parts[1], 10);
+                    const month = parseInt(parts[2], 10);
+                    savedSchedules.push({ year, month });
+                }
+            }
+        }
+
+        savedSchedules.sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.month - a.month;
+        });
+
+        if (savedSchedules.length === 0) {
+            historyList.innerHTML = '<p class="text-gray-500 text-sm p-2 text-center">ยังไม่มีประวัติการบันทึก</p>';
+            return;
+        }
+
+        savedSchedules.forEach(({ year, month }) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'history-item flex items-center justify-between w-full px-3 py-2 bg-white border rounded-lg mb-2 cursor-pointer hover:bg-blue-50 hover:border-blue-500 transition-colors';
+            itemDiv.dataset.year = year;
+            itemDiv.dataset.month = month;
+            itemDiv.title = 'คลิกเพื่อโหลด/แก้ไข';
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'font-semibold text-gray-800';
+            textSpan.textContent = `${monthNames[month]} ${year + 543}`;
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-btn text-sm bg-red-100 text-red-700 px-3 py-1 rounded-md hover:bg-red-200 transition-colors';
+            deleteButton.textContent = 'ลบ';
+            deleteButton.dataset.year = year;
+            deleteButton.dataset.month = month;
+
+            itemDiv.appendChild(textSpan);
+            itemDiv.appendChild(deleteButton);
+            historyList.appendChild(itemDiv);
+        });
+    }
 
     function populateSelectors() {
         monthSelect.innerHTML = '';
@@ -295,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
         offDaySelectB.innerHTML = '';
         weekDayNames.forEach((dayName, index) => {
             const optionA = document.createElement('option');
-            optionA.value = index; // 0=Sun, 1=Mon...
+            optionA.value = index;
             optionA.textContent = dayName;
             offDaySelectA.appendChild(optionA);
 
@@ -308,10 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
         offDaySelectB.value = preferredOffDayB;
     }
 
-    /**
-     * Main function to update the calendar display for a given payroll period.
-     * A period is defined as 26th of (month-1) to 25th of (month).
-     */
     function updateCalendar(year, month) {
         const endDate = new Date(year, month, 25);
         const startDate = new Date(year, month, 26);
@@ -324,20 +476,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('month-name').textContent = `รอบวันที่ ${formattedStart} - ${formattedEnd}`;
 
-        initializeScheduleForPeriod(startDate, endDate);
+        if (!loadSchedule(year, month)) {
+            initializeScheduleForPeriod(startDate, endDate);
+        }
         renderCalendarForPeriod(startDate);
     }
     
-    /**
-     * Initializes the scheduleData array for the given date range.
-     */
     function initializeScheduleForPeriod(startDate, endDate) {
         scheduleData = [];
         let currentDate = new Date(startDate);
         let i = 0;
         while (currentDate <= endDate) {
             scheduleData.push({
-                date: currentDate.toISOString().split('T')[0], // YYYY-MM-DD for unique ID
+                date: currentDate.toISOString().split('T')[0],
                 day: currentDate.getDate(),
                 month: currentDate.getMonth(),
                 fullDate: new Date(currentDate),
@@ -349,9 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Renders the calendar grid based on the scheduleData array.
-     */
     function renderCalendarForPeriod(startDate) {
         const calendarBody = document.getElementById('calendar-body');
         calendarBody.innerHTML = '';
@@ -368,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             
-            // Highlight days from the previous month
             if (dayData.month !== currentMonth) {
                 cell.classList.add('other-month');
             }
@@ -431,9 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else selectElement.classList.add('assignee-none');
     }
     
-    /**
-     * Efficiently handles shift changes without redrawing the whole calendar.
-     */
     function handleShiftChange(e) {
         const dateString = e.target.dataset.date;
         const shiftSlot = e.target.dataset.shiftSlot;
@@ -446,7 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else dayData.afternoon = newAssignee;
         
         updateSelectColor(e.target, newAssignee);
-        validateSchedule(); // Just update stats and warnings
+        validateSchedule();
+        updateSaveStatus('มีข้อมูลที่ยังไม่บันทึก');
     }
 
     function validateSchedule() {
@@ -478,13 +623,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (worksAfternoonB) statsB.afternoonShifts++;
 
             if ((worksMorningA && worksAfternoonA) && isBWorking) {
-                warnings.push(`วันที่ ${day.day}: ${employeeNameA} ควบกะ แต่ ${employeeNameB} ไม่ได้หยุด`);
+                warnings.push(`วันที่ ${day.day}: ${nameInputA.value} ควบกะ แต่ ${nameInputB.value} ไม่ได้หยุด`);
             }
             if ((worksMorningB && worksAfternoonB) && isAWorking) {
-                warnings.push(`วันที่ ${day.day}: ${employeeNameB} ควบกะ แต่ ${employeeNameA} ไม่ได้หยุด`);
+                warnings.push(`วันที่ ${day.day}: ${nameInputB.value} ควบกะ แต่ ${nameInputA.value} ไม่ได้หยุด`);
             }
             if (day.morning === 'none' && day.afternoon === 'none') {
-                warnings.push(`วันที่ ${day.day}: ร้านปิด (ไม่มีพนักงาน)`);
+                warnings.push(`วันที่ ${day.day}: ร้านปิด`);
             }
         });
 
@@ -499,19 +644,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSummary(employeeId, stats) {
         const { workDays, offDays, doubleShiftDays, morningShifts, afternoonShifts } = stats;
-        // const requiredOffDays = 4; // ไม่จำเป็นต้องใช้ตัวแปรนี้สำหรับคำนวณ OT อีกต่อไป
-
-        // ---- [แก้ไข] LOGIC การคำนวณ OT ใหม่ ----
-        // OT จะมาจากชั่วโมงที่ทำงานเกินเวลาปกติในแต่ละวันเท่านั้น
-        // ในโปรแกรมนี้คือการ "ควบกะ" ซึ่งคิดเป็น OT 4.5 ชั่วโมง
         const otHoursFromDoubleShifts = doubleShiftDays * 4.5;
-        const totalOtHours = otHoursFromDoubleShifts; // OT มาจากแหล่งเดียวคือการควบกะ
+        const totalOtHours = otHoursFromDoubleShifts;
 
-        const employeeName = employeeId === 'a' ? employeeNameA : employeeNameB;
-        const currentDailyWage = employeeId === 'a' ? dailyWageA : dailyWageB;
-        const currentOtWage = employeeId === 'a' ? otHourlyWageA : otHourlyWageB;
+        const currentEmployeeName = employeeId === 'a' ? nameInputA.value : nameInputB.value;
+        const currentDailyWage = employeeId === 'a' ? parseFloat(dailyWageInputA.value) : parseFloat(dailyWageInputB.value);
+        const currentOtWage = employeeId === 'a' ? parseFloat(otWageInputA.value) : parseFloat(otHourlyWageA.value);
 
-        // Update main summary card
         document.getElementById(`summary-work-${employeeId}`).textContent = workDays;
         document.getElementById(`summary-off-${employeeId}`).textContent = offDays;
 
@@ -519,10 +658,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const otElement = document.getElementById(`summary-ot-${employeeId}`);
         otElement.textContent = totalOtHours.toFixed(1).replace('.0', '');
 
-        // ---- [แก้ไข] อัปเดตคำอธิบาย OT ที่แสดงเมื่อเอาเมาส์ไปชี้ ----
         let details = [];
         if (totalOtHours > 0) {
-            // ลบการแสดง OT จาก "แทนวันหยุด" ออกไป
             details.push(`ควบกะ: ${otHoursFromDoubleShifts.toFixed(1).replace('.0', '')} ชม.`);
         }
         otElementContainer.title = details.join(' | ');
@@ -530,25 +667,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(`summary-morning-${employeeId}`).textContent = morningShifts;
         document.getElementById(`summary-afternoon-${employeeId}`).textContent = afternoonShifts;
 
-        // ---- [แก้ไข] การคำนวณเงินเดือน ----
-        // ค่าแรงปกติจะคิดจาก "จำนวนวันทำงานทั้งหมด" คูณ "ค่าแรงต่อวัน"
         const baseSalary = workDays * currentDailyWage;
         const otSalary = totalOtHours * currentOtWage;
         const totalSalary = baseSalary + otSalary;
 
-        document.getElementById(`salary-name-${employeeId}`).textContent = `${employeeName}:`;
+        document.getElementById(`salary-name-${employeeId}`).textContent = `${currentEmployeeName}:`;
         document.getElementById(`salary-base-${employeeId}`).textContent = `ค่าแรงปกติ: ${baseSalary.toLocaleString('th-TH')} บาท (${workDays} วัน)`;
         document.getElementById(`salary-ot-${employeeId}`).textContent = `ค่า OT: ${otSalary.toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท (${totalOtHours.toFixed(1).replace('.0', '')} ชม.)`;
         document.getElementById(`salary-total-${employeeId}`).innerHTML = `<span class="font-bold">รวม: ${totalSalary.toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท</span>`;
     }
 
-
     function autoSchedule() {
         const endDate = new Date(currentYear, currentMonth, 25);
         const startDate = new Date(currentYear, currentMonth, 26);
         startDate.setMonth(startDate.getMonth() - 1);
-
-        // 1. Create a base alternating schedule
         const baseSchedule = [];
         let tempDate = new Date(startDate);
         let i = 0;
@@ -565,24 +697,20 @@ document.addEventListener('DOMContentLoaded', () => {
             i++;
         }
         
-        // 2. Apply preferred off days
         let offDaysA = 0;
         let offDaysB = 0;
         const preferredA = parseInt(offDaySelectA.value);
         const preferredB = parseInt(offDaySelectB.value);
 
         baseSchedule.forEach(dayData => {
-            const dayOfWeek = dayData.fullDate.getDay(); // 0=Sun, 1=Mon...
-            
+            const dayOfWeek = dayData.fullDate.getDay();
             let aWantsOff = (dayOfWeek === preferredA && offDaysA < 4);
             let bWantsOff = (dayOfWeek === preferredB && offDaysB < 4);
 
-            // Handle conflict if both want the same day off
             if (aWantsOff && bWantsOff) {
-                 // Alternate who gets the day off based on week number
-                if (Math.floor(dayData.day / 8) % 2 === 0) { // Weeks 1, 3 -> A gets off
+                if (Math.floor(dayData.day / 8) % 2 === 0) {
                     bWantsOff = false;
-                } else { // Weeks 2, 4 -> B gets off
+                } else {
                     aWantsOff = false;
                 }
             }
@@ -599,7 +727,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         scheduleData = baseSchedule;
-        renderCalendarForPeriod(startDate); // Redraw calendar with the new schedule
+        renderCalendarForPeriod(startDate);
+        updateSaveStatus('มีข้อมูลที่ยังไม่บันทึก');
     }
     
     // ---- EVENT LISTENERS & INITIALIZATION ----
@@ -607,31 +736,89 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isNewPeriod) {
             updateCalendar(currentYear, currentMonth);
         } else {
-            // Re-render with existing data but updated names
-            const startDate = new Date(scheduleData[0].date);
+            const startDate = new Date(scheduleData[0].fullDate);
             renderCalendarForPeriod(startDate);
         }
     };
+
+    const markUnsaved = () => updateSaveStatus('มีข้อมูลที่ยังไม่บันทึก');
     
-    nameInputA.addEventListener('input', (e) => { employeeNameA = e.target.value; updateAndRerender(false); });
-    nameInputB.addEventListener('input', (e) => { employeeNameB = e.target.value; updateAndRerender(false); });
+    nameInputA.addEventListener('input', (e) => { updateAndRerender(false); markUnsaved(); });
+    nameInputB.addEventListener('input', (e) => { updateAndRerender(false); markUnsaved(); });
     monthSelect.addEventListener('change', () => { currentMonth = parseInt(monthSelect.value); updateAndRerender(); });
     yearSelect.addEventListener('change', () => { currentYear = parseInt(yearSelect.value); updateAndRerender(); });
-    offDaySelectA.addEventListener('change', (e) => { preferredOffDayA = parseInt(e.target.value); });
-    offDaySelectB.addEventListener('change', (e) => { preferredOffDayB = parseInt(e.target.value); });
+    offDaySelectA.addEventListener('change', (e) => { markUnsaved(); });
+    offDaySelectB.addEventListener('change', (e) => { markUnsaved(); });
+    
     autoScheduleBtn.addEventListener('click', autoSchedule);
+    saveScheduleBtn.addEventListener('click', saveSchedule);
     
     salaryToggle.addEventListener('change', () => salaryCard.classList.toggle('hidden'));
     
-    dailyWageInputA.addEventListener('input', (e) => { dailyWageA = parseFloat(e.target.value) || 0; validateSchedule(); });
-    otWageInputA.addEventListener('input', (e) => { otHourlyWageA = parseFloat(e.target.value) || 0; validateSchedule(); });
-    dailyWageInputB.addEventListener('input', (e) => { dailyWageB = parseFloat(e.target.value) || 0; validateSchedule(); });
-    otWageInputB.addEventListener('input', (e) => { otHourlyWageB = parseFloat(e.target.value) || 0; validateSchedule(); });
+    const wageInputHandler = (e) => {
+      validateSchedule();
+      markUnsaved();
+    };
+
+    dailyWageInputA.addEventListener('input', wageInputHandler);
+    otWageInputA.addEventListener('input', wageInputHandler);
+    dailyWageInputB.addEventListener('input', wageInputHandler);
+    otWageInputB.addEventListener('input', wageInputHandler);
+    
+    historyList.addEventListener('click', (e) => {
+        const target = e.target;
+        
+        if (target.classList.contains('delete-btn')) {
+            e.stopPropagation(); 
+            const year = parseInt(target.dataset.year);
+            const month = parseInt(target.dataset.month);
+            
+            if (confirm(`คุณต้องการลบข้อมูลของเดือน ${monthNames[month]} ${year + 543} ใช่หรือไม่?`)) {
+                const key = getStorageKey(year, month);
+                localStorage.removeItem(key);
+                populateHistoryCard();
+                
+                if (currentYear === year && currentMonth === month) {
+                    updateCalendar(currentYear, currentMonth);
+                }
+            }
+            return;
+        }
+
+        const historyItem = target.closest('.history-item');
+        if (historyItem) {
+            const year = parseInt(historyItem.dataset.year);
+            const month = parseInt(historyItem.dataset.month);
+
+            currentYear = year;
+            currentMonth = month;
+            yearSelect.value = year;
+            monthSelect.value = month;
+            updateCalendar(year, month);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+
+    clearHistoryBtn.addEventListener('click', () => {
+        if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลที่บันทึกไว้ทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('schedule_')) {
+                    keysToRemove.push(localStorage.key(i));
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            populateHistoryCard();
+            updateCalendar(currentYear, currentMonth);
+        }
+    });
     
     populateSelectors();
     updateCalendar(currentYear, currentMonth);
+    populateHistoryCard();
 });
 </script>
 
 </body>
 </html>
+
