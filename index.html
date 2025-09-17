@@ -122,101 +122,101 @@
         
         <div class="mb-6 p-4 bg-gray-50 rounded-lg border">
              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Employee A Panel -->
-                <div class="bg-white p-3 rounded-lg border space-y-2">
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="name-a" class="control-input text-sm font-bold flex-grow" value="สมชาย" title="ชื่อพนักงาน 1">
-                        <select id="offday-select-a" class="control-input text-sm w-auto" title="วันหยุดสำหรับจัดอัตโนมัติ"></select>
-                    </div>
-                    <div class="pt-2 border-t text-xs">
-                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
-                            <span>ทำงาน: <strong id="summary-work-a" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>หยุด: <strong id="summary-off-a" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span id="summary-ot-a-container" title="">OT: <strong id="summary-ot-a" class="text-orange-600">0</strong> ชม.</span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>เช้า: <strong id="summary-morning-a" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>บ่าย: <strong id="summary-afternoon-a" class="text-gray-800">0</strong></span>
-                        </div>
-                    </div>
-                </div>
-                <!-- Employee B Panel -->
+                 <!-- Employee A Panel -->
                  <div class="bg-white p-3 rounded-lg border space-y-2">
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="name-b" class="control-input text-sm font-bold flex-grow" value="สมหญิง" title="ชื่อพนักงาน 2">
-                        <select id="offday-select-b" class="control-input text-sm w-auto" title="วันหยุดสำหรับจัดอัตโนมัติ"></select>
-                    </div>
-                    <div class="pt-2 border-t text-xs">
-                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
-                            <span>ทำงาน: <strong id="summary-work-b" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>หยุด: <strong id="summary-off-b" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span id="summary-ot-b-container" title="">OT: <strong id="summary-ot-b" class="text-orange-600">0</strong> ชม.</span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>เช้า: <strong id="summary-morning-b" class="text-gray-800">0</strong></span>
-                            <span class="border-l h-4 border-gray-300"></span>
-                            <span>บ่าย: <strong id="summary-afternoon-b" class="text-gray-800">0</strong></span>
-                        </div>
-                    </div>
-                </div>
-             </div>
-             
-             <div class="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                  <div class="w-full">
-                      <button id="auto-schedule-btn" class="action-btn">จัดตารางอัตโนมัติ</button>
-                  </div>
-                  <div class="flex items-center justify-center">
-                      <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                      <label for="toggle-salary-card" class="ml-2 block text-sm text-gray-900">แสดงการคำนวณค่าแรง</label>
-                  </div>
-                  <div id="schedule-warnings" class="text-sm text-red-600 font-semibold text-center md:text-right"></div>
-             </div>
-
-             <!-- Salary Summary Card (Hidden by default) -->
-             <div id="salary-summary-card" class="hidden mt-4 pt-4 border-t">
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">คำนวณค่าแรง (โดยประมาณ)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p class="font-medium" id="salary-name-a">สมชาย:</p>
-                        <div class="mt-2 space-y-1 text-xs">
-                             <div>
-                                 <label for="daily-wage-input-a">ค่าแรง/วัน:</label>
-                                 <input type="number" id="daily-wage-input-a" class="control-input w-20 ml-1" value="374">
-                             </div>
-                             <div>
-                                 <label for="ot-wage-input-a">ค่า OT/ชม.:</label>
-                                 <input type="number" id="ot-wage-input-a" class="control-input w-20 ml-1" value="70">
-                             </div>
-                        </div>
-                        <ul class="list-disc list-inside ml-2 text-gray-600 mt-2">
-                            <li id="salary-base-a">ค่าแรงปกติ: 0 บาท</li>
-                            <li id="salary-ot-a">ค่า OT: 0 บาท</li>
-                            <li id="salary-total-a" class="font-bold">รวม: 0 บาท</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <p class="font-medium" id="salary-name-b">สมหญิง:</p>
-                         <div class="mt-2 space-y-1 text-xs">
-                             <div>
-                                 <label for="daily-wage-input-b">ค่าแรง/วัน:</label>
-                                 <input type="number" id="daily-wage-input-b" class="control-input w-20 ml-1" value="374">
-                             </div>
-                             <div>
-                                 <label for="ot-wage-input-b">ค่า OT/ชม.:</label>
-                                 <input type="number" id="ot-wage-input-b" class="control-input w-20 ml-1" value="70">
-                             </div>
+                     <div class="flex items-center gap-2">
+                         <input type="text" id="name-a" class="control-input text-sm font-bold flex-grow" value="สมชาย" title="ชื่อพนักงาน 1">
+                         <select id="offday-select-a" class="control-input text-sm w-auto" title="วันหยุดสำหรับจัดอัตโนมัติ"></select>
+                     </div>
+                     <div class="pt-2 border-t text-xs">
+                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
+                             <span>ทำงาน: <strong id="summary-work-a" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>หยุด: <strong id="summary-off-a" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span id="summary-ot-a-container" title="">OT: <strong id="summary-ot-a" class="text-orange-600">0</strong> ชม.</span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>เช้า: <strong id="summary-morning-a" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>บ่าย: <strong id="summary-afternoon-a" class="text-gray-800">0</strong></span>
                          </div>
-                        <ul class="list-disc list-inside ml-2 text-gray-600 mt-2">
-                           <li id="salary-base-b">ค่าแรงปกติ: 0 บาท</li>
-                           <li id="salary-ot-b">ค่า OT: 0 บาท</li>
-                           <li id="salary-total-b" class="font-bold">รวม: 0 บาท</li>
-                        </ul>
+                     </div>
+                 </div>
+                 <!-- Employee B Panel -->
+                  <div class="bg-white p-3 rounded-lg border space-y-2">
+                     <div class="flex items-center gap-2">
+                         <input type="text" id="name-b" class="control-input text-sm font-bold flex-grow" value="สมหญิง" title="ชื่อพนักงาน 2">
+                         <select id="offday-select-b" class="control-input text-sm w-auto" title="วันหยุดสำหรับจัดอัตโนมัติ"></select>
+                     </div>
+                     <div class="pt-2 border-t text-xs">
+                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
+                             <span>ทำงาน: <strong id="summary-work-b" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>หยุด: <strong id="summary-off-b" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span id="summary-ot-b-container" title="">OT: <strong id="summary-ot-b" class="text-orange-600">0</strong> ชม.</span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>เช้า: <strong id="summary-morning-b" class="text-gray-800">0</strong></span>
+                             <span class="border-l h-4 border-gray-300"></span>
+                             <span>บ่าย: <strong id="summary-afternoon-b" class="text-gray-800">0</strong></span>
+                         </div>
+                     </div>
+                 </div>
+              </div>
+              
+              <div class="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div class="w-full">
+                        <button id="auto-schedule-btn" class="action-btn">จัดตารางอัตโนมัติ</button>
                     </div>
-                </div>
-            </div>
+                    <div class="flex items-center justify-center">
+                        <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <label for="toggle-salary-card" class="ml-2 block text-sm text-gray-900">แสดงการคำนวณค่าแรง</label>
+                    </div>
+                    <div id="schedule-warnings" class="text-sm text-red-600 font-semibold text-center md:text-right"></div>
+              </div>
+
+              <!-- Salary Summary Card (Hidden by default) -->
+              <div id="salary-summary-card" class="hidden mt-4 pt-4 border-t">
+                  <h3 class="text-lg font-semibold text-gray-700 mb-2">คำนวณค่าแรง (โดยประมาณ)</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                          <p class="font-medium" id="salary-name-a">สมชาย:</p>
+                          <div class="mt-2 space-y-1 text-xs">
+                                <div>
+                                    <label for="daily-wage-input-a">ค่าแรง/วัน:</label>
+                                    <input type="number" id="daily-wage-input-a" class="control-input w-20 ml-1" value="374">
+                                </div>
+                                <div>
+                                    <label for="ot-wage-input-a">ค่า OT/ชม.:</label>
+                                    <input type="number" id="ot-wage-input-a" class="control-input w-20 ml-1" value="70">
+                                </div>
+                          </div>
+                          <ul class="list-disc list-inside ml-2 text-gray-600 mt-2">
+                              <li id="salary-base-a">ค่าแรงปกติ: 0 บาท</li>
+                              <li id="salary-ot-a">ค่า OT: 0 บาท</li>
+                              <li id="salary-total-a" class="font-bold">รวม: 0 บาท</li>
+                          </ul>
+                      </div>
+                      <div>
+                          <p class="font-medium" id="salary-name-b">สมหญิง:</p>
+                           <div class="mt-2 space-y-1 text-xs">
+                                <div>
+                                    <label for="daily-wage-input-b">ค่าแรง/วัน:</label>
+                                    <input type="number" id="daily-wage-input-b" class="control-input w-20 ml-1" value="374">
+                                </div>
+                                <div>
+                                    <label for="ot-wage-input-b">ค่า OT/ชม.:</label>
+                                    <input type="number" id="ot-wage-input-b" class="control-input w-20 ml-1" value="70">
+                                </div>
+                           </div>
+                          <ul class="list-disc list-inside ml-2 text-gray-600 mt-2">
+                             <li id="salary-base-b">ค่าแรงปกติ: 0 บาท</li>
+                             <li id="salary-ot-b">ค่า OT: 0 บาท</li>
+                             <li id="salary-total-b" class="font-bold">รวม: 0 บาท</li>
+                          </ul>
+                      </div>
+                  </div>
+              </div>
         </div>
 
         <div id="calendar-container">
@@ -499,14 +499,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSummary(employeeId, stats) {
         const { workDays, offDays, doubleShiftDays, morningShifts, afternoonShifts } = stats;
-        const requiredOffDays = 4; // Assuming 4 off days per month is the target
-        
-        // OT calculation: 8 hours for each missed required off-day, plus 4.5 hours for each double shift.
-        const otDaysFromLessOffDays = Math.max(0, requiredOffDays - offDays);
-        const otHoursFromLessOffDays = otDaysFromLessOffDays * 8;
+        // const requiredOffDays = 4; // ไม่จำเป็นต้องใช้ตัวแปรนี้สำหรับคำนวณ OT อีกต่อไป
+
+        // ---- [แก้ไข] LOGIC การคำนวณ OT ใหม่ ----
+        // OT จะมาจากชั่วโมงที่ทำงานเกินเวลาปกติในแต่ละวันเท่านั้น
+        // ในโปรแกรมนี้คือการ "ควบกะ" ซึ่งคิดเป็น OT 4.5 ชั่วโมง
         const otHoursFromDoubleShifts = doubleShiftDays * 4.5;
-        const totalOtHours = otHoursFromLessOffDays + otHoursFromDoubleShifts;
-        
+        const totalOtHours = otHoursFromDoubleShifts; // OT มาจากแหล่งเดียวคือการควบกะ
+
         const employeeName = employeeId === 'a' ? employeeNameA : employeeNameB;
         const currentDailyWage = employeeId === 'a' ? dailyWageA : dailyWageB;
         const currentOtWage = employeeId === 'a' ? otHourlyWageA : otHourlyWageB;
@@ -514,22 +514,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update main summary card
         document.getElementById(`summary-work-${employeeId}`).textContent = workDays;
         document.getElementById(`summary-off-${employeeId}`).textContent = offDays;
-        
+
         const otElementContainer = document.getElementById(`summary-ot-${employeeId}-container`);
         const otElement = document.getElementById(`summary-ot-${employeeId}`);
         otElement.textContent = totalOtHours.toFixed(1).replace('.0', '');
-        
+
+        // ---- [แก้ไข] อัปเดตคำอธิบาย OT ที่แสดงเมื่อเอาเมาส์ไปชี้ ----
         let details = [];
         if (totalOtHours > 0) {
-            if (otHoursFromLessOffDays > 0) details.push(`แทนวันหยุด: ${otHoursFromLessOffDays} ชม.`);
-            if (otHoursFromDoubleShifts > 0) details.push(`ควบกะ: ${otHoursFromDoubleShifts} ชม.`);
+            // ลบการแสดง OT จาก "แทนวันหยุด" ออกไป
+            details.push(`ควบกะ: ${otHoursFromDoubleShifts.toFixed(1).replace('.0', '')} ชม.`);
         }
         otElementContainer.title = details.join(' | ');
 
         document.getElementById(`summary-morning-${employeeId}`).textContent = morningShifts;
         document.getElementById(`summary-afternoon-${employeeId}`).textContent = afternoonShifts;
 
-        // Update salary card
+        // ---- [แก้ไข] การคำนวณเงินเดือน ----
+        // ค่าแรงปกติจะคิดจาก "จำนวนวันทำงานทั้งหมด" คูณ "ค่าแรงต่อวัน"
         const baseSalary = workDays * currentDailyWage;
         const otSalary = totalOtHours * currentOtWage;
         const totalSalary = baseSalary + otSalary;
@@ -539,6 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(`salary-ot-${employeeId}`).textContent = `ค่า OT: ${otSalary.toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท (${totalOtHours.toFixed(1).replace('.0', '')} ชม.)`;
         document.getElementById(`salary-total-${employeeId}`).innerHTML = `<span class="font-bold">รวม: ${totalSalary.toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท</span>`;
     }
+
 
     function autoSchedule() {
         const endDate = new Date(currentYear, currentMonth, 25);
