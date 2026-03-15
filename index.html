@@ -19,7 +19,7 @@
         }
         .calendar-cell {
             background-color: white;
-            min-height: 140px; /* เพิ่มความสูงนิดหน่อยให้พอดีกับการแบ่งโซน */
+            min-height: 140px;
             position: relative;
             border-right: 1px solid #e0e0e0;
             border-bottom: 1px solid #e0e0e0;
@@ -27,6 +27,7 @@
             padding-top: 28px;
             display: flex;
             flex-direction: column;
+            min-width: 0; /* ✨ แก้บั๊ก: ป้องกัน Grid ขยายตัวผิดปกติ */
         }
         .other-month {
             background-color: #f8f9fa !important;
@@ -80,6 +81,10 @@
             background-repeat: no-repeat;
             background-size: 12px;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5H7z'/%3e%3c/svg%3e");
+            min-width: 0; /* ✨ แก้บั๊ก: บังคับไม่ให้กล่องกว้างทะลุกรอบ */
+            text-overflow: ellipsis; /* ✨ แก้บั๊ก: ถ้าชื่อยาวไปให้แสดงเป็น ... */
+            white-space: nowrap; /* ✨ แก้บั๊ก: บังคับไม่ให้ชื่อตกบรรทัด */
+            overflow: hidden; /* ✨ แก้บั๊ก: ซ่อนส่วนที่เกิน */
         }
         .shift-hours {
             width: 35px;
@@ -389,7 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
         });
 
-        const startDate = new Date(scheduleData[0].date);
+        // ✨ แก้บั๊ก: ป้องกันวันที่เพี้ยนตอนจัดอัตโนมัติ
+        const startDate = new Date(scheduleData[0].fullDate);
         renderCalendarForPeriod(startDate);
         updateSaveStatus('จัดตารางอัตโนมัติแล้ว (กรุณากดบันทึก)');
     }
@@ -467,7 +473,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
             scheduleData.push({
-                date: currentDate.toISOString().split('T')[0],
+                // ✨ แก้บั๊ก: ใช้ฟอร์แมตเวลา Local ของเครื่องเพื่อป้องกันวันที่เพี้ยน
+                date: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`,
                 day: currentDate.getDate(),
                 month: currentDate.getMonth(),
                 fullDate: new Date(currentDate),
@@ -615,7 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayData = scheduleData.find(d => d.date === dateString);
         if(dayData) {
             dayData.shifts.splice(index, 1);
-            const startDate = new Date(scheduleData[0].date);
+            // ✨ แก้บั๊ก: ป้องกันวันที่เพี้ยนตอนลบกะ
+            const startDate = new Date(scheduleData[0].fullDate);
             renderCalendarForPeriod(startDate);
             validateAndSummarize();
             updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
@@ -719,7 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 scheduleData = JSON.parse(savedDataString);
                 scheduleData.forEach(d => {
-                    d.fullDate = new Date(d.date);
+                    // ✨ แก้บั๊ก: แยกตัวเลขปี-เดือน-วัน ออกมาประกอบใหม่ให้อยู่ใน Timezone ของไทยแน่นอน
+                    const [y, m, dateDay] = d.date.split('-');
+                    d.fullDate = new Date(y, m - 1, dateDay);
+                    
                     // ป้องกันความเข้ากันได้กับข้อมูลเก่าที่เคยใช้คำว่า "เสริม:" ให้ย้ายไปบ่าย
                     d.shifts.forEach(s => {
                         if (s.slotName === 'เสริม:') {
@@ -808,7 +819,8 @@ document.addEventListener('DOMContentLoaded', () => {
         staffModal.classList.add('hidden');
         
         renderEmployeePanels();
-        const startDate = new Date(scheduleData[0].date);
+        // ✨ แก้บั๊ก: ดึงวันที่ที่ถูกต้องมาแสดง
+        const startDate = new Date(scheduleData[0].fullDate);
         renderCalendarForPeriod(startDate);
     });
 
@@ -823,8 +835,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     clearScheduleBtn.addEventListener('click', () => {
         if(confirm('ยืนยันล้างตารางทั้งหมดในรอบนี้? (ข้อมูลจะกลายเป็น ว่าง)')) {
-            const startDate = new Date(scheduleData[0].date);
-            const endDate = new Date(scheduleData[scheduleData.length-1].date);
+            // ✨ แก้บั๊ก: ดึงวันที่ที่ถูกต้องมาเคลียร์
+            const startDate = new Date(scheduleData[0].fullDate);
+            const endDate = new Date(scheduleData[scheduleData.length-1].fullDate);
             initializeScheduleForPeriod(startDate, endDate);
             renderCalendarForPeriod(startDate);
             updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
