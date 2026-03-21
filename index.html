@@ -394,9 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ];
         });
 
-        // ✨ แก้บั๊ก: ป้องกันวันที่เพี้ยนตอนจัดอัตโนมัติ
-        const startDate = new Date(scheduleData[0].fullDate);
-        renderCalendarForPeriod(startDate);
+        // ✨ แก้บั๊ก: เรียกใช้คำสั่งวาดหน้าจอแบบไม่ต้องอ้างอิง Start Date ซ้ำซ้อน
+        renderCalendarForPeriod();
         updateSaveStatus('จัดตารางอัตโนมัติแล้ว (กรุณากดบันทึก)');
     }
 
@@ -465,7 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!loadSchedule(year, month)) {
             initializeScheduleForPeriod(startDate, endDate);
         }
-        renderCalendarForPeriod(startDate);
+        // ✨ แก้บั๊ก: ให้ฟังก์ชันวาดตารางตัดสินใจวันเริ่มต้นจากข้อมูลจริงในอาเรย์เสมอ
+        renderCalendarForPeriod();
     }
 
     function initializeScheduleForPeriod(startDate, endDate) {
@@ -473,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
             scheduleData.push({
-                // ✨ แก้บั๊ก: ใช้ฟอร์แมตเวลา Local ของเครื่องเพื่อป้องกันวันที่เพี้ยน
                 date: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`,
                 day: currentDate.getDate(),
                 month: currentDate.getMonth(),
@@ -487,9 +486,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderCalendarForPeriod(startDate) {
+    // ✨ แก้บั๊ก: ถอด Parameter ทิ้งไปเลย เพื่อบังคับใช้ข้อมูลจาก Array ตรงๆ
+    function renderCalendarForPeriod() {
         calendarBody.innerHTML = '';
+        if (scheduleData.length === 0) return;
+        
+        // ให้ยึดวันเริ่มต้นจากข้อมูลวันแรกในตารางเท่านั้น ป้องกันการคลาดเคลื่อน
+        const startDate = scheduleData[0].fullDate;
         const firstDayOfWeek = startDate.getDay();
+        
         for (let i = 0; i < firstDayOfWeek; i++) {
             calendarBody.insertAdjacentHTML('beforeend', '<div class="calendar-cell empty-cell"></div>');
         }
@@ -505,11 +510,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cell.innerHTML = `<div class="day-number ${isToday ? 'today' : ''}">${dayData.day}</div>`;
             
-            // คัดแยกกะเช้า และ กะบ่าย
             const mornShifts = dayData.shifts.filter(s => s.slotName.includes('เช้า'));
-            const aftShifts = dayData.shifts.filter(s => !s.slotName.includes('เช้า')); // ที่เหลือถือเป็นบ่าย
+            const aftShifts = dayData.shifts.filter(s => !s.slotName.includes('เช้า')); 
 
-            // --- วาดโซนเช้า ---
             const mornSection = document.createElement('div');
             mornSection.className = 'shift-section flex-1';
             mornShifts.forEach(shift => {
@@ -522,19 +525,17 @@ document.addEventListener('DOMContentLoaded', () => {
             addMornBtn.textContent = '+ เพิ่มเช้า';
             addMornBtn.onclick = () => {
                 dayData.shifts.push({ id: 's'+Date.now(), slotName: 'เช้า (เสริม):', empId: 'none', hrs: 8, isExtra: true });
-                renderCalendarForPeriod(startDate); 
+                renderCalendarForPeriod(); 
                 validateAndSummarize();
                 updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
             };
             mornSection.appendChild(addMornBtn);
             cell.appendChild(mornSection);
 
-            // --- เส้นแบ่งคั่นกลาง ---
             const divider = document.createElement('div');
             divider.className = 'shift-divider';
             cell.appendChild(divider);
 
-            // --- วาดโซนบ่าย ---
             const aftSection = document.createElement('div');
             aftSection.className = 'shift-section flex-1';
             aftShifts.forEach(shift => {
@@ -547,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addAftBtn.textContent = '+ เพิ่มบ่าย';
             addAftBtn.onclick = () => {
                 dayData.shifts.push({ id: 's'+Date.now(), slotName: 'บ่าย (เสริม):', empId: 'none', hrs: 8, isExtra: true });
-                renderCalendarForPeriod(startDate); 
+                renderCalendarForPeriod(); 
                 validateAndSummarize();
                 updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
             };
@@ -565,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
         wrapper.className = 'shift-assignment';
         
         let slotLabelHtml = `<span class="shift-label">${shift.slotName}</span>`;
-        // ถ้าเป็นกะที่กดเพิ่มเข้ามา (isExtra = true) จะโชว์ปุ่ม ลบ(x)
         if(shift.isExtra) {
             slotLabelHtml = `<span class="shift-label text-red-500 cursor-pointer hover:underline font-bold print:hidden" title="ลบกะนี้" onclick="removeShift('${dateString}', ${index})">ลบ(x)</span>`;
         }
@@ -622,9 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayData = scheduleData.find(d => d.date === dateString);
         if(dayData) {
             dayData.shifts.splice(index, 1);
-            // ✨ แก้บั๊ก: ป้องกันวันที่เพี้ยนตอนลบกะ
-            const startDate = new Date(scheduleData[0].fullDate);
-            renderCalendarForPeriod(startDate);
+            // ✨ แก้บั๊ก: เรียกโดยตรงไม่ต้องใช้วันที่แนบมา
+            renderCalendarForPeriod();
             validateAndSummarize();
             updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
         }
@@ -657,7 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     dailyHrsByEmp[shift.empId] = (dailyHrsByEmp[shift.empId] || 0) + shift.hrs;
                     stats[shift.empId].workShifts += 1;
                     
-                    // นับสถิติความยุติธรรม เช้า-บ่าย
                     if(shift.slotName.includes('เช้า')) {
                         stats[shift.empId].mornShifts += 1;
                     } else {
@@ -666,7 +664,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // ตรรกะคิด OT
             for (let empId in dailyHrsByEmp) {
                 const totalDailyHrs = dailyHrsByEmp[empId];
                 if (totalDailyHrs > 8) {
@@ -678,7 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // อัปเดต UI (รวมเงิน และ ความยุติธรรม)
         employees.forEach(emp => {
             const stat = stats[emp.id];
             const otRate = emp.otRate || (emp.hourlyRate * 1.5);
@@ -686,7 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const otPay = stat.otHrs * otRate;
             stat.totalPay = normalPay + otPay;
 
-            // Update Top Panels
             const summaryWork = document.getElementById(`summary-work-${emp.id}`);
             const summaryOt = document.getElementById(`summary-ot-${emp.id}`);
             const summaryMorn = document.getElementById(`summary-morn-${emp.id}`);
@@ -697,7 +692,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(summaryMorn) summaryMorn.textContent = stat.mornShifts;
             if(summaryAft) summaryAft.textContent = stat.aftShifts;
 
-            // Update Salary Card
             const salNormalText = document.getElementById(`salary-normal-${emp.id}`);
             const salOtText = document.getElementById(`salary-ot-${emp.id}`);
             const salTotalText = document.getElementById(`salary-total-${emp.id}`);
@@ -725,13 +719,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedDataString = localStorage.getItem(key);
         if (savedDataString) {
             try {
-                scheduleData = JSON.parse(savedDataString);
+                const parsedData = JSON.parse(savedDataString);
+                
+                // ✨ แก้บั๊ก: ตรวจสอบอย่างเข้มงวดว่า ข้อมูลที่โหลดมาเป็นวันที่ 26 ตรงเป๊ะไหม
+                // ถ้าไม่ตรง (เกิดจากของเก่าที่พังไปแล้ว) ให้โยนทิ้งและวาดใหม่ทันที
+                const expectedStartDate = new Date(year, month, 26);
+                expectedStartDate.setMonth(expectedStartDate.getMonth() - 1);
+                const expectedDateStr = `${expectedStartDate.getFullYear()}-${String(expectedStartDate.getMonth() + 1).padStart(2, '0')}-${String(expectedStartDate.getDate()).padStart(2, '0')}`;
+                
+                if (parsedData.length === 0 || parsedData[0].date !== expectedDateStr) {
+                    console.warn("ตรวจพบวันที่คลาดเคลื่อนในระบบเก่า ระบบทำการล้างตารางใหม่");
+                    return false; 
+                }
+
+                scheduleData = parsedData;
                 scheduleData.forEach(d => {
-                    // ✨ แก้บั๊ก: แยกตัวเลขปี-เดือน-วัน ออกมาประกอบใหม่ให้อยู่ใน Timezone ของไทยแน่นอน
                     const [y, m, dateDay] = d.date.split('-');
                     d.fullDate = new Date(y, m - 1, dateDay);
                     
-                    // ป้องกันความเข้ากันได้กับข้อมูลเก่าที่เคยใช้คำว่า "เสริม:" ให้ย้ายไปบ่าย
                     d.shifts.forEach(s => {
                         if (s.slotName === 'เสริม:') {
                             s.slotName = 'บ่าย (เสริม):';
@@ -819,9 +824,8 @@ document.addEventListener('DOMContentLoaded', () => {
         staffModal.classList.add('hidden');
         
         renderEmployeePanels();
-        // ✨ แก้บั๊ก: ดึงวันที่ที่ถูกต้องมาแสดง
-        const startDate = new Date(scheduleData[0].fullDate);
-        renderCalendarForPeriod(startDate);
+        // ✨ แก้บั๊ก: ให้วาดตารางโดยอิงจากข้อมูลตรงๆ
+        renderCalendarForPeriod();
     });
 
     // ---- EVENT LISTENERS ----
@@ -835,11 +839,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     clearScheduleBtn.addEventListener('click', () => {
         if(confirm('ยืนยันล้างตารางทั้งหมดในรอบนี้? (ข้อมูลจะกลายเป็น ว่าง)')) {
-            // ✨ แก้บั๊ก: ดึงวันที่ที่ถูกต้องมาเคลียร์
-            const startDate = new Date(scheduleData[0].fullDate);
-            const endDate = new Date(scheduleData[scheduleData.length-1].fullDate);
+            // ✨ แก้บั๊ก: เวลาล้างตาราง ให้สร้างจากเดือน/ปี ที่เลือกจริงๆ ไม่ใช่ไปดึงจากของเก่าที่อาจจะเพี้ยนอยู่
+            const endDate = new Date(currentYear, currentMonth, 25);
+            const startDate = new Date(currentYear, currentMonth, 26);
+            startDate.setMonth(startDate.getMonth() - 1);
+            
             initializeScheduleForPeriod(startDate, endDate);
-            renderCalendarForPeriod(startDate);
+            renderCalendarForPeriod();
             updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
         }
     });
