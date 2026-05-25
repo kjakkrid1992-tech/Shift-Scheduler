@@ -3,248 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมจัดการตารางงาน (ระบบพนักงาน PT)</title>
+    <title>โปรแกรมจัดการตารางงาน (ระบบพนักงาน PT) - V4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f7f9fc;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
-            border-left: 1px solid #e0e0e0;
-            border-top: 1px solid #e0e0e0;
-        }
-        .calendar-cell {
-            background-color: white;
-            min-height: 140px;
-            position: relative;
-            border-right: 1px solid #e0e0e0;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 4px;
-            padding-top: 28px;
-            display: flex;
-            flex-direction: column;
-            min-width: 0; /* ✨ แก้บั๊ก: ป้องกัน Grid ขยายตัวผิดปกติ */
-        }
-        .other-month {
-            background-color: #f8f9fa !important;
-        }
-        .day-header {
-            background-color: #f7f9fc;
-            color: #5f6368;
-            font-weight: 500;
-            text-align: center;
-            padding: 10px 0;
-            font-size: 0.9rem;
-            border-right: 1px solid #e0e0e0;
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f7f9fc; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-left: 1px solid #e0e0e0; border-top: 1px solid #e0e0e0; }
+        .calendar-cell { background-color: white; min-height: 140px; position: relative; border-right: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; padding: 4px; padding-top: 28px; display: flex; flex-direction: column; min-width: 0; transition: all 0.3s ease; }
+        .other-month { background-color: #f8f9fa !important; }
+        .day-header { background-color: #f7f9fc; color: #5f6368; font-weight: 500; text-align: center; padding: 10px 0; font-size: 0.9rem; border-right: 1px solid #e0e0e0; }
         .day-header:last-child { border-right: none; }
         
-        /* สไตล์สำหรับการแบ่งโซน เช้า-บ่าย */
-        .shift-section {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .shift-divider {
-            border-top: 1px dashed #e5e7eb;
-            margin: 4px 0;
-        }
-
-        .shift-assignment {
-            display: flex;
-            align-items: center;
-            margin-bottom: 2px;
-            gap: 2px;
-        }
-        .shift-label {
-            font-size: 0.75rem;
-            width: 35px;
-            color: #3c4043;
-            flex-shrink: 0;
-        }
-        .shift-select {
-            flex-grow: 1;
-            border-radius: 4px;
-            padding: 2px 4px;
-            font-size: 0.75rem;
-            color: white;
-            border: none;
-            cursor: pointer;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-position: right 2px center;
-            background-repeat: no-repeat;
-            background-size: 12px;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5H7z'/%3e%3c/svg%3e");
-            min-width: 0; /* ✨ แก้บั๊ก: บังคับไม่ให้กล่องกว้างทะลุกรอบ */
-            text-overflow: ellipsis; /* ✨ แก้บั๊ก: ถ้าชื่อยาวไปให้แสดงเป็น ... */
-            white-space: nowrap; /* ✨ แก้บั๊ก: บังคับไม่ให้ชื่อตกบรรทัด */
-            overflow: hidden; /* ✨ แก้บั๊ก: ซ่อนส่วนที่เกิน */
-        }
-        .shift-hours {
-            width: 35px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 1px;
-            font-size: 0.75rem;
-            text-align: center;
-            flex-shrink: 0;
-        }
+        .shift-section { display: flex; flex-direction: column; gap: 2px; z-index: 20; position: relative; }
+        .shift-divider { border-top: 1px dashed #e5e7eb; margin: 4px 0; }
+        .shift-assignment { display: flex; align-items: center; margin-bottom: 2px; gap: 2px; transition: opacity 0.3s; }
+        .shift-label { font-size: 0.75rem; width: 35px; color: #3c4043; flex-shrink: 0; }
         
-        /* ชุดสีพนักงาน */
-        .color-0 { background-color: #4285F4; } /* Blue */
-        .color-1 { background-color: #FBBC04; } /* Yellow */
-        .color-2 { background-color: #34A853; } /* Green */
-        .color-3 { background-color: #EA4335; } /* Red */
-        .color-4 { background-color: #9C27B0; } /* Purple */
-        .color-none { background-color: #70757a; }
+        .shift-select { flex-grow: 1; border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; color: white; border: none; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-position: right 2px center; background-repeat: no-repeat; background-size: 12px; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5H7z'/%3e%3c/svg%3e"); min-width: 0; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+        .shift-hours { width: 35px; border: 1px solid #d1d5db; border-radius: 4px; padding: 1px; font-size: 0.75rem; text-align: center; flex-shrink: 0; }
         
-        .day-number {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #3c4043;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-        .day-number.today {
-            background-color: #d93025;
-            color: white;
-            font-weight: bold;
-        }
+        .color-0 { background-color: #4285F4; } .color-1 { background-color: #FBBC04; } .color-2 { background-color: #34A853; } .color-3 { background-color: #EA4335; } .color-4 { background-color: #9C27B0; } .color-none { background-color: #70757a; }
+        
+        .day-number { position: absolute; top: 5px; left: 5px; font-size: 0.8rem; font-weight: 500; color: #3c4043; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 20; }
+        .day-number.today { background-color: #d93025; color: white; font-weight: bold; }
         .empty-cell { background-color: #f7f9fc; }
-        .control-input {
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 4px 8px;
-        }
-        .action-btn {
-            background-color: #1a73e8;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: background-color 0.2s;
-            text-align: center;
-        }
-        .action-btn:hover { background-color: #185abc; }
+        .control-input { border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 8px; }
+        .action-btn { color: white; padding: 8px 16px; border-radius: 8px; font-weight: 500; transition: background-color 0.2s; text-align: center; }
+        .add-shift-btn { font-size: 0.65rem; color: #6b7280; text-align: center; cursor: pointer; border: 1px dashed #d1d5db; border-radius: 4px; padding: 2px; margin-top: 2px; }
+        
+        .watermark-off { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: #9ca3af; opacity: 0.3; transform: rotate(-15deg); pointer-events: none; z-index: 10; letter-spacing: 0.05em; }
 
-        .add-shift-btn {
-            font-size: 0.65rem;
-            color: #6b7280;
-            text-align: center;
-            cursor: pointer;
-            border: 1px dashed #d1d5db;
-            border-radius: 4px;
-            padding: 2px;
-            margin-top: 2px;
-            transition: all 0.2s;
+        @media (max-width: 768px) {
+            .day-header { display: none; }
+            .calendar-grid { grid-template-columns: 1fr; gap: 12px; border: none; background: transparent; }
+            .calendar-cell { border: 1px solid #e0e0e0; border-radius: 12px; min-height: 100px; padding: 12px; padding-top: 36px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+            .empty-cell { display: none; }
+            .day-number { background-color: #f3f4f6; width: auto; padding: 2px 8px; border-radius: 12px; left: 12px; top: 8px; }
+            .watermark-off { font-size: 3rem; opacity: 0.2; transform: rotate(0deg); justify-content: flex-end; padding-right: 20px; }
         }
-        .add-shift-btn:hover { background-color: #f3f4f6; color: #374151; }
 
-        /* สไตล์สำหรับการพิมพ์ (Print) */
         @media print {
-            body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                background-color: white !important;
-            }
-            .max-w-7xl {
-                box-shadow: none !important;
-                border: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                max-width: 100% !important;
-            }
-            .shift-select {
-                background-image: none !important; 
-                border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            }
-            .shift-hours {
-                border: none !important;
-                background: transparent !important;
-            }
-            .calendar-cell {
-                min-height: 80px !important; 
-            }
-            .print\:hidden {
-                display: none !important;
-            }
-            .shift-divider { border-top: 1px solid #e5e7eb; }
+            body { background-color: white !important; }
+            .max-w-7xl { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+            .shift-select { background-image: none !important; border: 1px solid rgba(255,255,255,0.3) !important; }
+            .shift-hours { border: none !important; background: transparent !important; }
+            .calendar-cell { min-height: 80px !important; }
+            .print\:hidden { display: none !important; }
+            .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: 0 !important; border: 1px solid #e0e0e0 !important; }
+            .day-header { display: block !important; }
+            .empty-cell { display: block !important; }
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-2 md:p-8">
 
-    <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+    <div class="max-w-7xl mx-auto bg-white p-4 md:p-6 rounded-xl shadow-lg border border-gray-200">
         <div class="text-center mb-4">
-            <h1 class="text-3xl font-bold text-gray-800">โปรแกรมจัดการตารางงาน (ระบบ Part-time)</h1>
-            <div class="flex justify-center items-center gap-4 mt-2">
-                <h2 id="month-name" class="text-2xl font-semibold text-gray-600"></h2>
-                <div class="flex gap-2 print:hidden">
-                    <select id="month-select" class="control-input w-full"></select>
-                    <select id="year-select" class="control-input w-full"></select>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">โปรแกรมจัดการตารางงาน (ระบบ Part-time V4)</h1>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 mt-2">
+                <h2 id="month-name" class="text-xl md:text-2xl font-semibold text-gray-600"></h2>
+                <div class="flex gap-2 w-full md:w-auto print:hidden">
+                    <select id="month-select" class="control-input w-full md:w-32"></select>
+                    <select id="year-select" class="control-input w-full md:w-24"></select>
                 </div>
             </div>
         </div>
         
-        <!-- แผงรายชื่อพนักงานแบบไดนามิก -->
         <div class="mb-6 p-4 bg-gray-50 rounded-lg border">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="font-bold text-gray-700">ข้อมูลพนักงาน <span class="text-xs font-normal text-gray-500">(พร้อมสถิติการกระจายกะ)</span></h3>
+                <h3 class="font-bold text-gray-700">ข้อมูลพนักงาน <span class="text-xs font-normal text-gray-500">(พร้อมตำแหน่งและวันลา)</span></h3>
                 <button id="manage-staff-btn" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 py-1 px-3 rounded shadow-sm transition print:hidden">⚙️ จัดการพนักงาน</button>
             </div>
             
-            <div id="employee-panels-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- ข้อมูลพนักงานจะถูกสร้างที่นี่โดยอัตโนมัติ -->
-            </div>
+            <div id="employee-panels-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
               
-            <div class="mt-4 pt-4 border-t flex flex-wrap gap-4 items-start justify-between print:hidden">
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button id="print-schedule-btn" class="action-btn bg-purple-500 hover:bg-purple-600 text-sm flex-1 md:flex-none">🖨️ พิมพ์</button>
-                    <button id="auto-schedule-btn" class="action-btn bg-blue-500 hover:bg-blue-600 text-sm flex-1 md:flex-none">จัดอัตโนมัติ</button>
-                    <button id="clear-schedule-btn" class="action-btn bg-red-500 hover:bg-red-600 text-sm flex-1 md:flex-none">ล้างตาราง</button>
-                    <button id="save-schedule-btn" class="action-btn bg-green-600 hover:bg-green-700 text-sm flex-1 md:flex-none">บันทึกตาราง</button>
+            <div class="mt-4 pt-4 border-t flex flex-wrap gap-3 items-center justify-between print:hidden">
+                <div class="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+                    <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border shadow-sm">
+                        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">รูปแบบจัดกะ:</label>
+                        <select id="auto-schedule-mode" class="border rounded px-2 py-1 outline-none focus:border-blue-500 text-sm font-medium">
+                            <option value="2">2 คน (สลับกะทุกวัน)</option>
+                            <option value="3">3 คน (หมุนเวียนกะ)</option>
+                            <option value="balance-pay" selected>✨ เกลี่ยกะอัจฉริยะ (รายได้เท่ากัน + ไม่ฟันหลอ)</option>
+                        </select>
+                        <button id="auto-schedule-btn" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded font-medium transition">จัดอัตโนมัติ</button>
+                    </div>
+                    <button id="print-schedule-btn" class="action-btn bg-purple-500 hover:bg-purple-600 text-sm">🖨️ พิมพ์</button>
+                    <button id="clear-schedule-btn" class="action-btn bg-red-500 hover:bg-red-600 text-sm">ล้างตาราง</button>
+                    <button id="save-schedule-btn" class="action-btn bg-green-600 hover:bg-green-700 text-sm flex-grow lg:flex-grow-0">💾 บันทึกตาราง</button>
                 </div>
-                <div class="flex flex-col items-start md:items-end w-full md:w-auto">
+                
+                <div class="flex flex-col items-start lg:items-end w-full lg:w-auto mt-2 lg:mt-0">
                     <div class="flex items-center">
-                         <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                         <input type="checkbox" id="toggle-salary-card" class="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer" checked>
                          <label for="toggle-salary-card" class="ml-2 block text-sm text-gray-900 cursor-pointer font-medium">แสดงการคำนวณค่าแรง</label>
                     </div>
-                    <div id="schedule-warnings" class="text-sm text-red-600 font-semibold mt-2 md:text-right"></div>
                 </div>
             </div>
-            <div id="save-status" class="text-xs text-center text-gray-500 mt-2 h-4 font-medium"></div>
+            
+            <div id="schedule-warnings" class="text-sm text-red-600 font-semibold mt-3 p-2 bg-red-50 rounded hidden border border-red-200"></div>
+            <div id="save-status" class="text-xs text-center text-gray-500 mt-2 font-medium h-4"></div>
 
-            <!-- Salary Summary Card -->
-            <div id="salary-summary-card" class="hidden mt-4 pt-4 border-t">
-                <h3 class="text-lg font-semibold text-gray-700 mb-4">คำนวณค่าแรง (แยกค่าแรงปกติ และ OT)</h3>
-                <div id="salary-details-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
-                    <!-- การคำนวณเงินจะงอกตรงนี้อัตโนมัติ -->
-                </div>
+            <div id="salary-summary-card" class="mt-4 pt-4 border-t">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">คำนวณค่าแรง</h3>
+                <div id="salary-details-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm"></div>
             </div>
         </div>
 
         <div id="calendar-container">
-            <!-- เพิ่มป้ายบอกเวลาทำงานเหนือปฏิทิน -->
-            <div class="flex flex-wrap gap-4 mb-2 text-xs text-gray-600 px-2 justify-end bg-blue-50 p-2 rounded-lg border border-blue-100 shadow-sm">
-                <span>☀️ <strong>กะเช้า:</strong> 06.30 - 15.30 น.</span>
-                <span>🌙 <strong>กะบ่าย:</strong> 12.00 - 21.00 น.</span>
-                <span class="text-blue-600 font-semibold">(ลงเวลาทำงานปกติ 8 ชม./กะ | เกิน 8 ชม. คิดเป็น OT)</span>
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-2 print:hidden">
+                <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border-2 border-purple-300 shadow-sm shadow-purple-100 flex-grow md:flex-grow-0">
+                    <label class="text-sm font-bold text-purple-700 whitespace-nowrap">🔍 ไฮไลท์ตารางของ:</label>
+                    <select id="focus-emp-select" class="border-none bg-transparent outline-none focus:ring-0 text-sm font-bold text-purple-700 cursor-pointer w-full md:w-auto">
+                        <option value="all">-- ดูทุกคน (ตารางรวม) --</option>
+                    </select>
+                </div>
+                <!-- Dynamic Legend -->
+                <div id="dynamic-legend" class="flex flex-wrap gap-4 text-xs text-gray-600 px-3 justify-end bg-blue-50 py-2 rounded-lg border border-blue-100 shadow-sm flex-grow md:flex-grow-0">
+                </div>
             </div>
             
-            <div class="grid grid-cols-7 text-center">
+            <div class="grid grid-cols-7 text-center day-header-container">
                 <div class="day-header text-red-500">อาทิตย์</div>
                 <div class="day-header">จันทร์</div>
                 <div class="day-header">อังคาร</div>
@@ -258,19 +137,40 @@
     </div>
 
     <!-- Modal จัดการพนักงาน -->
-    <div id="staff-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-2xl shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800">จัดการรายชื่อและวันหยุดประจำสัปดาห์</h3>
-                <button id="close-staff-modal" class="text-gray-400 hover:text-red-500 font-bold text-2xl leading-none">&times;</button>
+    <div id="staff-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
+        <div class="bg-white rounded-xl p-4 md:p-6 w-full max-w-4xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">จัดการพนักงาน, ตำแหน่ง และวันลา</h3>
+                <button id="close-staff-modal" class="text-gray-400 hover:text-red-500 font-bold text-3xl leading-none">&times;</button>
             </div>
-            <div id="staff-edit-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto p-1">
-                <!-- รายชื่อพนักงานสำหรับแก้ไข -->
+            <div class="hidden lg:grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 mb-2 px-2">
+                <div class="col-span-3">ชื่อพนักงาน</div>
+                <div class="col-span-2">ตำแหน่ง</div>
+                <div class="col-span-1">เรทปกติ</div>
+                <div class="col-span-1">OT</div>
+                <div class="col-span-2">วันหยุดประจำ</div>
+                <div class="col-span-2">วันลา (วว/ดด/ปปปป)</div>
+                <div class="col-span-1 text-center">ลบ</div>
             </div>
-            <button id="add-new-staff-btn" class="w-full py-2 border border-dashed border-gray-300 text-gray-600 rounded mb-4 hover:bg-gray-50 hover:border-blue-400 transition">+ เพิ่มพนักงานใหม่</button>
+            <div id="staff-edit-list" class="space-y-3 mb-4"></div>
+            <button id="add-new-staff-btn" class="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg font-medium hover:bg-gray-50 hover:border-blue-400 transition mb-4">+ เพิ่มพนักงานใหม่</button>
             <div class="flex justify-end">
-                <button id="save-staff-btn" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 shadow-md transition">บันทึกข้อมูลพนักงาน</button>
+                <button id="save-staff-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md transition">บันทึกข้อมูล</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal แจกแจงรายละเอียดค่าแรง (Payslip) -->
+    <div id="payslip-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-[60]">
+        <div class="bg-white rounded-xl p-4 md:p-6 w-full max-w-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">รายละเอียดค่าแรง <span id="payslip-emp-name" class="text-blue-600"></span></h3>
+                <div class="flex gap-2">
+                    <button onclick="printPayslip()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1 rounded font-bold text-sm transition print:hidden">🖨️ พิมพ์แจ้งพนักงาน</button>
+                    <button id="close-payslip-modal" class="text-gray-400 hover:text-red-500 font-bold text-2xl leading-none">&times;</button>
+                </div>
+            </div>
+            <div id="payslip-content" class="overflow-x-auto"></div>
         </div>
     </div>
 
@@ -282,13 +182,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const shortMonthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
     const dayNames = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
     
+    // ✨ 1. MASTER DATA: ควบคุมจำนวนกะ เวลา และชั่วโมงทำงานจากจุดเดียว
+    const shiftTemplates = [
+        { id: 'shift_morn', name: 'เช้า', timeText: '06.30 - 15.30 น.', workHours: 8 },
+        { id: 'shift_aft', name: 'บ่าย', timeText: '12.00 - 21.00 น.', workHours: 8 }
+        // หากเทศกาลลูกค้าเยอะ สามารถ uncomment บรรทัดล่างเพื่อเพิ่มกะได้ทันที
+        // ,{ id: 'shift_night', name: 'ดึก', timeText: '21.00 - 06.00 น.', workHours: 8 } 
+    ];
+
     let currentYear = now.getFullYear();
     let currentMonth = now.getMonth();
     let scheduleData = [];
     
-    let employees = JSON.parse(localStorage.getItem('pt_employees_orig_ot_final')) || [
-        { id: 'emp_a', name: 'สมชาย', hourlyRate: 50, otRate: 70, prefOffDay: 1 }, 
-        { id: 'emp_b', name: 'สมหญิง', hourlyRate: 50, otRate: 70, prefOffDay: 3 } 
+    let employees = JSON.parse(localStorage.getItem('pt_employees_v4')) || [
+        { id: 'emp_a', name: 'สมชาย', role: 'ต้อนรับ', hourlyRate: 50, otRate: 70, prefOffDay: -1, leaveRequests: [] }, 
+        { id: 'emp_b', name: 'สมหญิง', role: 'แคชเชียร์', hourlyRate: 50, otRate: 70, prefOffDay: -1, leaveRequests: [] },
+        { id: 'emp_c', name: 'สมศรี', role: 'แม่บ้าน', hourlyRate: 45, otRate: 65, prefOffDay: -1, leaveRequests: [] }
     ];
 
     // ---- DOM ELEMENTS ----
@@ -304,6 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearScheduleBtn = document.getElementById('clear-schedule-btn');
     const autoScheduleBtn = document.getElementById('auto-schedule-btn');
     const printScheduleBtn = document.getElementById('print-schedule-btn');
+    const scheduleWarnings = document.getElementById('schedule-warnings');
+    
+    const focusEmpSelect = document.getElementById('focus-emp-select'); 
+    const dynamicLegend = document.getElementById('dynamic-legend');
 
     const staffModal = document.getElementById('staff-modal');
     const manageStaffBtn = document.getElementById('manage-staff-btn');
@@ -315,19 +228,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- INITIALIZATION ----
     function init() {
         populateSelectors();
+        renderLegend();
+        updateFocusDropdown();
         renderEmployeePanels();
         updateCalendar(currentYear, currentMonth);
     }
 
     function getStorageKey(year, month) {
-        return `pt_schedule_orig_ot_final_${year}_${month}`;
+        return `pt_schedule_v4_${year}_${month}`;
     }
 
     function updateSaveStatus(statusText, isSaved = false) {
         if (isSaved) {
             const timeString = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             saveStatus.textContent = `บันทึกล่าสุด: วันนี้, ${timeString}`;
-            saveStatus.className = 'text-xs text-center text-gray-500 mt-2 h-4 font-medium';
+            saveStatus.className = 'text-xs text-center text-green-600 mt-2 h-4 font-medium';
         } else {
             saveStatus.textContent = statusText;
             saveStatus.className = 'text-xs text-center text-red-500 font-semibold mt-2 h-4';
@@ -335,72 +250,149 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateSelectors() {
-        monthSelect.innerHTML = '';
-        yearSelect.innerHTML = '';
-        monthNames.forEach((name, index) => {
-            monthSelect.appendChild(new Option(name, index));
-        });
-        for (let year = now.getFullYear() - 2; year <= now.getFullYear() + 2; year++) {
+        monthNames.forEach((name, index) => monthSelect.appendChild(new Option(name, index)));
+        for (let year = now.getFullYear() - 1; year <= now.getFullYear() + 2; year++) {
             yearSelect.appendChild(new Option(year + 543, year));
         }
         monthSelect.value = currentMonth;
         yearSelect.value = currentYear;
     }
 
-    // ---- AUTO SCHEDULE LOGIC ----
-    
+    function renderLegend() {
+        let iconMap = ['☀️', '🌙', '🌟', '⏰'];
+        dynamicLegend.innerHTML = shiftTemplates.map((t, i) => `<span>${iconMap[i] || '🔸'} <strong>${t.name}:</strong> ${t.timeText}</span>`).join(' <span class="mx-2 text-gray-300">|</span> ') + ` <span class="ml-2 text-blue-600 font-semibold">(เกิน 8 ชม. คิด OT)</span>`;
+    }
+
+    function updateFocusDropdown() {
+        const currentVal = focusEmpSelect.value;
+        focusEmpSelect.innerHTML = '<option value="all">-- ดูทุกคน (ตารางรวม) --</option>';
+        employees.forEach(emp => {
+            focusEmpSelect.appendChild(new Option(`👤 ของ: ${emp.name}`, emp.id));
+        });
+        if (employees.some(e => e.id === currentVal)) focusEmpSelect.value = currentVal;
+        else focusEmpSelect.value = 'all';
+    }
+
+    focusEmpSelect.addEventListener('change', () => { renderCalendarForPeriod(); });
+
+    // ✨ 2. NEW SMART AUTO SCHEDULE LOGIC (Block Scheduling + Dynamic Shifts)
     function autoSchedule() {
-        if (employees.length < 2) {
-            alert('คุณต้องมีพนักงานอย่างน้อย 2 คน ถึงจะจัดตารางอัตโนมัติได้ครับ');
+        const mode = document.getElementById('auto-schedule-mode').value;
+        
+        if (mode !== "balance-pay" && employees.length < parseInt(mode)) {
+            alert(`ต้องมีพนักงานในระบบอย่างน้อย ${mode} คน จึงจะใช้สูตรรูปแบบนี้ได้ครับ`);
             return;
         }
 
-        const empA = employees[0];
-        const empB = employees[1];
-        let offDaysA = 0;
-        let offDaysB = 0;
-
-        scheduleData.forEach((dayData, index) => {
-            let mornAssignee = (index % 2 === 0) ? empA.id : empB.id;
-            let aftAssignee = (index % 2 === 0) ? empB.id : empA.id;
-
-            const dayOfWeek = dayData.fullDate.getDay();
-            let aWantsOff = (empA.prefOffDay !== -1 && dayOfWeek === parseInt(empA.prefOffDay) && offDaysA < 4);
-            let bWantsOff = (empB.prefOffDay !== -1 && dayOfWeek === parseInt(empB.prefOffDay) && offDaysB < 4);
-
-            if (aWantsOff && bWantsOff) {
-                if (Math.floor(dayData.day / 8) % 2 === 0) {
-                    bWantsOff = false;
-                } else {
-                    aWantsOff = false;
-                }
-            }
-            
-            if (aWantsOff) {
-                mornAssignee = empB.id;
-                aftAssignee = empB.id;
-                offDaysA++;
-            } else if (bWantsOff) {
-                mornAssignee = empA.id;
-                aftAssignee = empA.id;
-                offDaysB++;
-            }
-
-            let aftHrs = (mornAssignee === aftAssignee) ? 4.5 : 8;
-
-            dayData.shifts = [
-                { id: 's1', slotName: 'เช้า:', empId: mornAssignee, hrs: 8, isExtra: false },
-                { id: 's2', slotName: 'บ่าย:', empId: aftAssignee, hrs: aftHrs, isExtra: false }
-            ];
+        let earningsTracker = {};
+        let consecutiveTracker = {}; // นับวันทำงานต่อเนื่อง
+        let shiftYesterday = {}; // จำกะสุดท้ายที่ทำเมื่อวาน เพื่อกันเลิกดึกต่อเช้า
+        
+        employees.forEach(e => { 
+            earningsTracker[e.id] = 0; 
+            consecutiveTracker[e.id] = 0; 
+            shiftYesterday[e.id] = null; 
         });
 
-        // ✨ แก้บั๊ก: เรียกใช้คำสั่งวาดหน้าจอแบบไม่ต้องอ้างอิง Start Date ซ้ำซ้อน
+        const empA = employees[0], empB = employees[1], empC = employees.length > 2 ? employees[2] : null;
+
+        scheduleData.forEach((dayData, index) => {
+            const dayOfWeek = dayData.fullDate.getDay();
+            let workersToday = new Set();
+            dayData.shifts = [];
+
+            if (mode === "balance-pay") {
+                // เกลี่ยกะอัตโนมัติ (รายได้ + Block Scheduling)
+                shiftTemplates.forEach((template, tIndex) => {
+                    let availableEmps = employees.filter(e => 
+                        e.prefOffDay !== dayOfWeek && 
+                        !(e.leaveRequests || []).includes(dayData.date) &&
+                        !workersToday.has(e.id) // กันคนทำควบกะแบบบังคับ
+                    );
+
+                    // Anti-Clopening: ถ้าเป็นกะแรกของวัน (เช่น เช้า) ห้ามดึงคนที่ทำกะสุดท้ายของเมื่อวาน (เช่น บ่าย) มาลง
+                    if (tIndex === 0 && shiftTemplates.length > 1) {
+                        const lastShiftId = shiftTemplates[shiftTemplates.length - 1].id;
+                        availableEmps = availableEmps.filter(e => shiftYesterday[e.id] !== lastShiftId);
+                    }
+
+                    if (availableEmps.length > 0) {
+                        // Weighted Scoring: ให้โบนัสคนที่ทำเมื่อวาน (จะได้ทำติดกัน) แต่ถ้าทำเกิน 5 วันแล้ว ตัดโบนัสทิ้งให้ไปพัก
+                        availableEmps.sort((a, b) => {
+                            let scoreA = earningsTracker[a.id];
+                            let scoreB = earningsTracker[b.id];
+                            
+                            if (shiftYesterday[a.id] && consecutiveTracker[a.id] < 5) scoreA -= 2000;
+                            if (shiftYesterday[b.id] && consecutiveTracker[b.id] < 5) scoreB -= 2000;
+
+                            return scoreA - scoreB; // ค่าน้อยสุดได้เข้ากะก่อน
+                        });
+
+                        let selectedEmp = availableEmps[0];
+                        dayData.shifts.push({ id: `s${Date.now()}_${tIndex}`, templateId: template.id, slotName: `${template.name}:`, empId: selectedEmp.id, hrs: template.workHours, isExtra: false });
+                        
+                        earningsTracker[selectedEmp.id] += (template.workHours * selectedEmp.hourlyRate);
+                        workersToday.add(selectedEmp.id);
+                        shiftYesterday[selectedEmp.id] = template.id;
+                    } else {
+                        // ไม่มีคนว่างเลย ปล่อยกะว่าง
+                        dayData.shifts.push({ id: `s${Date.now()}_${tIndex}`, templateId: template.id, slotName: `${template.name}:`, empId: 'none', hrs: template.workHours, isExtra: false });
+                    }
+                });
+
+            } else {
+                // โหมด 2 หรือ 3 คนแบบคงเดิม (ทำ Mapping ให้เข้ากับ Dynamic Shift)
+                let mornEmp = null, aftEmp = null, offEmp = null;
+                
+                if (mode === "2") {
+                    mornEmp = (index % 2 === 0) ? empA : empB;
+                    aftEmp = (index % 2 === 0) ? empB : empA;
+                } else if (mode === "3") {
+                    let forcedOffEmps = employees.slice(0,3).filter(e => e.prefOffDay === dayOfWeek || (e.leaveRequests || []).includes(dayData.date));
+                    if (forcedOffEmps.length >= 1) {
+                        offEmp = forcedOffEmps[0];
+                        let remaining = employees.slice(0,3).filter(e => e.id !== offEmp.id);
+                        if (remaining.length === 2) {
+                            if (shiftYesterday[remaining[0].id]) { aftEmp = remaining[0]; mornEmp = remaining[1]; } 
+                            else { mornEmp = remaining[0]; aftEmp = remaining[1]; }
+                        } else if (remaining.length === 1) {
+                            mornEmp = remaining[0]; aftEmp = null;
+                        }
+                    } else {
+                        if (index === 0) { mornEmp = empA; aftEmp = empB; offEmp = empC; } 
+                        else { 
+                            let prevMornId = Object.keys(shiftYesterday).find(id => shiftYesterday[id] === shiftTemplates[0].id);
+                            let prevAftId = Object.keys(shiftYesterday).find(id => shiftYesterday[id] === shiftTemplates[1]?.id);
+                            
+                            offEmp = employees.find(e => e.id === prevAftId);
+                            aftEmp = employees.find(e => e.id === prevMornId);
+                            mornEmp = employees.find(e => e.id !== offEmp?.id && e.id !== aftEmp?.id);
+                        }
+                    }
+                }
+
+                if (mornEmp && (mornEmp.leaveRequests || []).includes(dayData.date)) mornEmp = null;
+                if (aftEmp && (aftEmp.leaveRequests || []).includes(dayData.date)) aftEmp = null;
+
+                if(shiftTemplates[0]) dayData.shifts.push({ id: 's1', templateId: shiftTemplates[0].id, slotName: shiftTemplates[0].name+':', empId: mornEmp ? mornEmp.id : 'none', hrs: shiftTemplates[0].workHours, isExtra: false });
+                if(shiftTemplates[1]) dayData.shifts.push({ id: 's2', templateId: shiftTemplates[1].id, slotName: shiftTemplates[1].name+':', empId: aftEmp ? aftEmp.id : 'none', hrs: shiftTemplates[1].workHours, isExtra: false });
+
+                if(mornEmp) { workersToday.add(mornEmp.id); shiftYesterday[mornEmp.id] = shiftTemplates[0].id; }
+                if(aftEmp) { workersToday.add(aftEmp.id); shiftYesterday[aftEmp.id] = shiftTemplates[1]?.id; }
+            }
+
+            // อัปเดตตัวนับวันติดกัน (Fatigue Management)
+            employees.forEach(e => {
+                if(workersToday.has(e.id)) consecutiveTracker[e.id]++;
+                else { consecutiveTracker[e.id] = 0; shiftYesterday[e.id] = null; }
+            });
+        });
+
         renderCalendarForPeriod();
-        updateSaveStatus('จัดตารางอัตโนมัติแล้ว (กรุณากดบันทึก)');
+        updateSaveStatus('จัดรูปแบบอัจฉริยะสำเร็จ (กรุณากดบันทึก)');
     }
 
     // ---- UI RENDERERS ----
-
     function renderEmployeePanels() {
         employeePanelsContainer.innerHTML = '';
         salaryDetailsContainer.innerHTML = '';
@@ -408,45 +400,46 @@ document.addEventListener('DOMContentLoaded', () => {
         employees.forEach((emp, index) => {
             const colorClass = `color-${index % 5}`;
             const otRate = emp.otRate || (emp.hourlyRate * 1.5); 
+            const leaveBadge = (emp.leaveRequests && emp.leaveRequests.length > 0) 
+                ? `<div class="mt-1 text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md inline-block border border-red-100">🏖️ ลา: ${emp.leaveRequests.length} วัน</div>` : '';
             
-            // 1. สร้าง Panel สรุปด้านบน (เพิ่มสถิติยุติธรรม เช้า-บ่าย)
             const panel = document.createElement('div');
             panel.className = 'bg-white p-3 rounded-lg border space-y-2 relative overflow-hidden shadow-sm flex flex-col justify-between';
             panel.innerHTML = `
                 <div class="absolute top-0 left-0 w-1 h-full ${colorClass}"></div>
                 <div class="flex items-center justify-between pl-2">
-                    <span class="text-sm font-bold text-gray-800">${emp.name}</span>
-                    <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">${emp.prefOffDay == -1 ? 'ไม่มีวันหยุดประจำ' : 'หยุด: '+dayNames[emp.prefOffDay]}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-800">${emp.name}</span>
+                        <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded border border-purple-200">${emp.role || 'ทั่วไป'}</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">${emp.prefOffDay == -1 ? 'ไม่มีวันหยุด' : 'หยุด: '+dayNames[emp.prefOffDay]}</span>
                 </div>
                 <div class="pt-2 border-t text-xs pl-2">
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600">
-                        <span>รวมกะ: <strong id="summary-work-${emp.id}" class="text-gray-800">0</strong></span>
+                    <div class="flex items-center gap-2 text-gray-600 mb-1">
+                        <span>กะรวม: <strong id="summary-work-${emp.id}" class="text-gray-800">0</strong></span>
                         <span class="border-l h-3 border-gray-300"></span>
-                        <span title="โอที (ชั่วโมงที่เกิน 8 ชม.ต่อวัน)">OT: <strong id="summary-ot-${emp.id}" class="text-orange-600">0</strong> ชม.</span>
+                        <span>OT: <strong id="summary-ot-${emp.id}" class="text-orange-600">0</strong> ชม.</span>
                     </div>
-                    <!-- สถิติความยุติธรรม เช้า-บ่าย -->
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-500 mt-1 pt-1 border-t border-dashed border-gray-200">
-                        <span title="จำนวนกะเช้า">☀️ เช้า: <strong id="summary-morn-${emp.id}" class="text-orange-500">0</strong></span>
-                        <span class="border-l h-3 border-gray-300"></span>
-                        <span title="จำนวนกะบ่าย">🌙 บ่าย: <strong id="summary-aft-${emp.id}" class="text-indigo-500">0</strong></span>
-                    </div>
+                    ${leaveBadge}
                 </div>
             `;
             employeePanelsContainer.appendChild(panel);
 
-            // 2. สร้างส่วนคำนวณเงินเดือนใน Card ที่ซ่อนอยู่ 
             const salaryDiv = document.createElement('div');
-            salaryDiv.className = "bg-gray-50 p-3 rounded-lg border border-gray-100";
+            salaryDiv.className = "bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col justify-between h-full";
             salaryDiv.innerHTML = `
-                <p class="font-bold text-gray-800">${emp.name}:</p>
-                <div class="mt-1 mb-2 text-xs text-gray-500">
-                    เรทปกติ: ${emp.hourlyRate} บ./ชม. | OT: ${otRate} บ./ชม.
+                <div>
+                    <p class="font-bold text-gray-800">${emp.name}:</p>
+                    <div class="mt-1 mb-2 text-xs text-gray-500">เรท: ${emp.hourlyRate} บ./ชม. | OT: ${otRate} บ./ชม.</div>
+                    <ul class="list-disc list-inside ml-2 text-gray-600 text-sm space-y-1">
+                        <li id="salary-normal-${emp.id}">ค่าแรงปกติ: 0 บาท</li>
+                        <li id="salary-ot-${emp.id}">ค่า OT: 0 บาท</li>
+                        <li id="salary-total-${emp.id}" class="font-bold text-blue-700 mt-2 pt-2 border-t border-gray-200">รวม: 0 บาท</li>
+                    </ul>
                 </div>
-                <ul class="list-disc list-inside ml-2 text-gray-600 text-sm space-y-1">
-                    <li id="salary-normal-${emp.id}">ค่าแรงปกติ: 0 บาท</li>
-                    <li id="salary-ot-${emp.id}">ค่า OT: 0 บาท</li>
-                    <li id="salary-total-${emp.id}" class="font-bold text-blue-700 mt-2 pt-2 border-t border-gray-200">รวมเป็นเงิน: 0 บาท</li>
-                </ul>
+                <button onclick="openPayslip('${emp.id}')" class="mt-3 w-full bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 py-1.5 rounded text-xs font-bold transition shadow-sm">
+                    📋 แจกแจงรายวัน (กันข้อโต้แย้ง)
+                </button>
             `;
             salaryDetailsContainer.appendChild(salaryDiv);
         });
@@ -464,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!loadSchedule(year, month)) {
             initializeScheduleForPeriod(startDate, endDate);
         }
-        // ✨ แก้บั๊ก: ให้ฟังก์ชันวาดตารางตัดสินใจวันเริ่มต้นจากข้อมูลจริงในอาเรย์เสมอ
         renderCalendarForPeriod();
     }
 
@@ -472,28 +464,38 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleData = [];
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
+            
+            // ✨ 3. Build Shifts Dynamically from Master Data
+            let dailyShifts = shiftTemplates.map((template, idx) => {
+                return {
+                    id: `s_${idx}_${Date.now()}`,
+                    templateId: template.id,
+                    slotName: template.name + ':',
+                    empId: 'none',
+                    hrs: template.workHours,
+                    isExtra: false
+                };
+            });
+
             scheduleData.push({
                 date: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`,
                 day: currentDate.getDate(),
                 month: currentDate.getMonth(),
                 fullDate: new Date(currentDate),
-                shifts: [
-                    { id: 's1', slotName: 'เช้า:', empId: 'none', hrs: 8, isExtra: false },
-                    { id: 's2', slotName: 'บ่าย:', empId: 'none', hrs: 8, isExtra: false }
-                ]
+                shifts: dailyShifts
             });
             currentDate.setDate(currentDate.getDate() + 1);
         }
     }
 
-    // ✨ แก้บั๊ก: ถอด Parameter ทิ้งไปเลย เพื่อบังคับใช้ข้อมูลจาก Array ตรงๆ
     function renderCalendarForPeriod() {
         calendarBody.innerHTML = '';
         if (scheduleData.length === 0) return;
         
-        // ให้ยึดวันเริ่มต้นจากข้อมูลวันแรกในตารางเท่านั้น ป้องกันการคลาดเคลื่อน
         const startDate = scheduleData[0].fullDate;
         const firstDayOfWeek = startDate.getDay();
+        const focusedEmpId = focusEmpSelect.value;
+        const isFocusedMode = focusedEmpId !== 'all';
         
         for (let i = 0; i < firstDayOfWeek; i++) {
             calendarBody.insertAdjacentHTML('beforeend', '<div class="calendar-cell empty-cell"></div>');
@@ -501,120 +503,158 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        let fatigueTracker = {}; 
+        employees.forEach(e => fatigueTracker[e.id] = 0);
+        let warningsList = [];
 
-        scheduleData.forEach(dayData => {
+        scheduleData.forEach((dayData, dayIndex) => {
             const isToday = dayData.fullDate.getTime() === today.getTime();
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             if (dayData.month !== currentMonth) cell.classList.add('other-month');
 
-            cell.innerHTML = `<div class="day-number ${isToday ? 'today' : ''}">${dayData.day}</div>`;
+            const dateStrTH = `${dayData.day}/${dayData.month+1}`;
+            cell.innerHTML = `<div class="day-number ${isToday ? 'today' : ''}">
+                <span class="md:hidden text-[10px] mr-1 text-gray-500">${dayNames[dayData.fullDate.getDay()]}</span>
+                ${dayData.day}
+            </div>`;
             
-            const mornShifts = dayData.shifts.filter(s => s.slotName.includes('เช้า'));
-            const aftShifts = dayData.shifts.filter(s => !s.slotName.includes('เช้า')); 
+            let hasShiftToday = false;
+            if (isFocusedMode) {
+                hasShiftToday = dayData.shifts.some(s => s.empId === focusedEmpId);
+                if (!hasShiftToday) {
+                    cell.classList.add('bg-gray-100');
+                    const watermark = document.createElement('div');
+                    watermark.className = 'watermark-off';
+                    watermark.textContent = '🌴 หยุด';
+                    cell.appendChild(watermark);
+                }
+            }
 
-            const mornSection = document.createElement('div');
-            mornSection.className = 'shift-section flex-1';
-            mornShifts.forEach(shift => {
-                const originalIndex = dayData.shifts.indexOf(shift);
-                mornSection.appendChild(createShiftRow(dayData.date, shift, originalIndex));
+            let peopleOnLeave = employees.filter(emp => (emp.leaveRequests || []).includes(dayData.date));
+            if(peopleOnLeave.length > 0) {
+                if(isFocusedMode) peopleOnLeave = peopleOnLeave.filter(emp => emp.id === focusedEmpId);
+                if(peopleOnLeave.length > 0) {
+                    const leaveBanner = document.createElement('div');
+                    leaveBanner.className = 'text-[9px] text-red-500 bg-red-50 text-center mb-1 rounded border border-red-100 print:hidden mx-1 truncate relative z-20';
+                    leaveBanner.textContent = `🛑 ลา: ${peopleOnLeave.map(p=>p.name).join(',')}`;
+                    cell.appendChild(leaveBanner);
+                }
+            }
+
+            // -- SMART VALIDATION (Dynamic) --
+            let empDailyShifts = {};
+            dayData.shifts.forEach(s => {
+               if(s.empId !== 'none') empDailyShifts[s.empId] = (empDailyShifts[s.empId] || 0) + 1;
             });
             
-            const addMornBtn = document.createElement('div');
-            addMornBtn.className = 'add-shift-btn print:hidden';
-            addMornBtn.textContent = '+ เพิ่มเช้า';
-            addMornBtn.onclick = () => {
-                dayData.shifts.push({ id: 's'+Date.now(), slotName: 'เช้า (เสริม):', empId: 'none', hrs: 8, isExtra: true });
-                renderCalendarForPeriod(); 
-                validateAndSummarize();
-                updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
-            };
-            mornSection.appendChild(addMornBtn);
-            cell.appendChild(mornSection);
+            let doubleShifts = Object.keys(empDailyShifts).filter(id => empDailyShifts[id] > 1);
+            if (doubleShifts.length > 0) {
+                if (!isFocusedMode || doubleShifts.includes(focusedEmpId)) cell.classList.add('bg-red-50', 'border-red-300');
+                const doubleNames = doubleShifts.map(id => employees.find(e=>e.id===id)?.name).join(',');
+                warningsList.push(`⚠️ วันที่ ${dateStrTH}: ${doubleNames} ถูกจัดควบกะหลายเวลา`);
+            }
 
-            const divider = document.createElement('div');
-            divider.className = 'shift-divider';
-            cell.appendChild(divider);
-
-            const aftSection = document.createElement('div');
-            aftSection.className = 'shift-section flex-1';
-            aftShifts.forEach(shift => {
-                const originalIndex = dayData.shifts.indexOf(shift);
-                aftSection.appendChild(createShiftRow(dayData.date, shift, originalIndex));
+            let workersToday = new Set(Object.keys(empDailyShifts));
+            employees.forEach(emp => {
+                if (workersToday.has(emp.id)) {
+                    fatigueTracker[emp.id]++;
+                    if (fatigueTracker[emp.id] > 6 && !warningsList.some(w => w.includes(`${emp.name} ทำงานติดกัน`))) {
+                        warningsList.push(`⚠️ แจ้งเตือน: ${emp.name} ทำงานติดกันเกิน 6 วัน (ช่วงวันที่ ${dateStrTH})`);
+                    }
+                } else {
+                    fatigueTracker[emp.id] = 0; 
+                }
             });
 
-            const addAftBtn = document.createElement('div');
-            addAftBtn.className = 'add-shift-btn print:hidden';
-            addAftBtn.textContent = '+ เพิ่มบ่าย';
-            addAftBtn.onclick = () => {
-                dayData.shifts.push({ id: 's'+Date.now(), slotName: 'บ่าย (เสริม):', empId: 'none', hrs: 8, isExtra: true });
-                renderCalendarForPeriod(); 
-                validateAndSummarize();
-                updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
-            };
-            aftSection.appendChild(addAftBtn);
-            cell.appendChild(aftSection);
+            // ✨ 4. Render UI Dynamically based on shiftTemplates
+            shiftTemplates.forEach((template, tIdx) => {
+                const sectionShifts = dayData.shifts.filter(s => s.templateId === template.id || (!s.templateId && s.slotName.startsWith(template.name)));
+                
+                const section = document.createElement('div');
+                section.className = 'shift-section flex-1';
+                
+                sectionShifts.forEach(shift => {
+                    section.appendChild(createShiftRow(dayData.date, shift, dayData.shifts.indexOf(shift), focusedEmpId));
+                });
+                
+                const addBtn = document.createElement('div');
+                addBtn.className = 'add-shift-btn print:hidden relative z-20'; 
+                addBtn.textContent = `+ เพิ่ม${template.name}`;
+                addBtn.onclick = () => { 
+                    dayData.shifts.push({ id: 's'+Date.now(), templateId: template.id, slotName: `${template.name}เสริม:`, empId: 'none', hrs: template.workHours, isExtra: true }); 
+                    renderCalendarForPeriod(); updateSaveStatus('ยังไม่บันทึก'); 
+                };
+                section.appendChild(addBtn);
+                cell.appendChild(section);
+
+                if (tIdx < shiftTemplates.length - 1) {
+                    cell.appendChild(Object.assign(document.createElement('div'), {className: 'shift-divider'}));
+                }
+            });
 
             calendarBody.appendChild(cell);
         });
         
+        if (isFocusedMode) {
+            const empName = employees.find(e => e.id === focusedEmpId)?.name;
+            warningsList = warningsList.filter(w => w.includes(empName));
+        }
+
+        if (warningsList.length > 0) {
+            scheduleWarnings.innerHTML = warningsList.join('<br>');
+            scheduleWarnings.classList.remove('hidden');
+        } else {
+            scheduleWarnings.classList.add('hidden');
+        }
+
         validateAndSummarize();
     }
 
-    function createShiftRow(dateString, shift, index) {
+    function createShiftRow(dateString, shift, index, focusedEmpId) {
         const wrapper = document.createElement('div');
-        wrapper.className = 'shift-assignment';
+        wrapper.className = 'shift-assignment relative z-20 transition-opacity duration-300';
         
+        if (focusedEmpId !== 'all' && shift.empId !== focusedEmpId) {
+            wrapper.classList.add('opacity-30');
+            wrapper.style.pointerEvents = 'none'; 
+        }
+
         let slotLabelHtml = `<span class="shift-label">${shift.slotName}</span>`;
         if(shift.isExtra) {
-            slotLabelHtml = `<span class="shift-label text-red-500 cursor-pointer hover:underline font-bold print:hidden" title="ลบกะนี้" onclick="removeShift('${dateString}', ${index})">ลบ(x)</span>`;
+            slotLabelHtml = `<span class="shift-label text-red-500 cursor-pointer hover:underline font-bold print:hidden" title="ลบกะ" onclick="removeShift('${dateString}', ${index})">ลบ(x)</span>`;
         }
         wrapper.innerHTML = slotLabelHtml;
 
         const select = document.createElement('select');
         select.className = 'shift-select';
-        
         select.appendChild(new Option('--- ว่าง ---', 'none'));
         
         let isEmpExist = false;
         employees.forEach(emp => {
             const opt = new Option(emp.name, emp.id);
-            if(emp.id === shift.empId) {
-                opt.selected = true;
-                isEmpExist = true;
-            }
+            if(emp.id === shift.empId) { opt.selected = true; isEmpExist = true; }
             select.appendChild(opt);
         });
 
-        if (!isEmpExist && shift.empId !== 'none') {
-            shift.empId = 'none';
-            select.value = 'none';
-        }
-
+        if (!isEmpExist && shift.empId !== 'none') { shift.empId = 'none'; select.value = 'none'; }
         updateSelectColor(select, shift.empId);
 
         const hrsInput = document.createElement('input');
-        hrsInput.type = 'number';
-        hrsInput.step = '0.5';
-        hrsInput.className = 'shift-hours';
-        hrsInput.value = shift.hrs;
-        hrsInput.title = 'จำนวนชั่วโมง';
+        hrsInput.type = 'number'; hrsInput.step = '0.5'; hrsInput.className = 'shift-hours';
+        hrsInput.value = shift.hrs; hrsInput.title = 'ชั่วโมง';
 
         select.addEventListener('change', (e) => {
-            shift.empId = e.target.value;
-            updateSelectColor(e.target, shift.empId);
-            validateAndSummarize();
+            shift.empId = e.target.value; updateSelectColor(e.target, shift.empId);
+            renderCalendarForPeriod(); 
             updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
         });
-
         hrsInput.addEventListener('change', (e) => {
             shift.hrs = parseFloat(e.target.value) || 0;
-            validateAndSummarize();
-            updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
+            validateAndSummarize(); updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
         });
 
-        wrapper.appendChild(select);
-        wrapper.appendChild(hrsInput);
+        wrapper.appendChild(select); wrapper.appendChild(hrsInput);
         return wrapper;
     }
 
@@ -622,53 +662,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayData = scheduleData.find(d => d.date === dateString);
         if(dayData) {
             dayData.shifts.splice(index, 1);
-            // ✨ แก้บั๊ก: เรียกโดยตรงไม่ต้องใช้วันที่แนบมา
-            renderCalendarForPeriod();
-            validateAndSummarize();
-            updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
+            renderCalendarForPeriod(); updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
         }
     }
 
     function updateSelectColor(selectElement, empId) {
         selectElement.className = selectElement.className.replace(/\bcolor-\S+/g, '');
         const empIndex = employees.findIndex(e => e.id === empId);
-        
-        if (empId === 'none' || empIndex === -1) {
-            selectElement.classList.add('color-none');
-        } else {
-            selectElement.classList.add(`color-${empIndex % 5}`);
-        }
+        if (empId === 'none' || empIndex === -1) selectElement.classList.add('color-none');
+        else selectElement.classList.add(`color-${empIndex % 5}`);
     }
-
-    // ---- LOGIC & SUMMARY (WITH OVERTIME & FAIRNESS STATS) ----
 
     function validateAndSummarize() {
         const stats = {};
-        employees.forEach(e => {
-            stats[e.id] = { workShifts: 0, normalHrs: 0, otHrs: 0, totalPay: 0, mornShifts: 0, aftShifts: 0 };
-        });
+        employees.forEach(e => stats[e.id] = { workShifts: 0, normalHrs: 0, otHrs: 0, totalPay: 0 });
 
         scheduleData.forEach(day => {
             const dailyHrsByEmp = {};
-
             day.shifts.forEach(shift => {
                 if (shift.empId !== 'none' && stats[shift.empId]) {
                     dailyHrsByEmp[shift.empId] = (dailyHrsByEmp[shift.empId] || 0) + shift.hrs;
                     stats[shift.empId].workShifts += 1;
-                    
-                    if(shift.slotName.includes('เช้า')) {
-                        stats[shift.empId].mornShifts += 1;
-                    } else {
-                        stats[shift.empId].aftShifts += 1;
-                    }
                 }
             });
-
             for (let empId in dailyHrsByEmp) {
                 const totalDailyHrs = dailyHrsByEmp[empId];
                 if (totalDailyHrs > 8) {
-                    stats[empId].normalHrs += 8;
-                    stats[empId].otHrs += (totalDailyHrs - 8);
+                    stats[empId].normalHrs += 8; stats[empId].otHrs += (totalDailyHrs - 8);
                 } else {
                     stats[empId].normalHrs += totalDailyHrs;
                 }
@@ -678,181 +698,221 @@ document.addEventListener('DOMContentLoaded', () => {
         employees.forEach(emp => {
             const stat = stats[emp.id];
             const otRate = emp.otRate || (emp.hourlyRate * 1.5);
-            const normalPay = stat.normalHrs * emp.hourlyRate;
-            const otPay = stat.otHrs * otRate;
-            stat.totalPay = normalPay + otPay;
+            stat.totalPay = (stat.normalHrs * emp.hourlyRate) + (stat.otHrs * otRate);
 
             const summaryWork = document.getElementById(`summary-work-${emp.id}`);
             const summaryOt = document.getElementById(`summary-ot-${emp.id}`);
-            const summaryMorn = document.getElementById(`summary-morn-${emp.id}`);
-            const summaryAft = document.getElementById(`summary-aft-${emp.id}`);
-
             if(summaryWork) summaryWork.textContent = stat.workShifts;
             if(summaryOt) summaryOt.textContent = stat.otHrs;
-            if(summaryMorn) summaryMorn.textContent = stat.mornShifts;
-            if(summaryAft) summaryAft.textContent = stat.aftShifts;
 
             const salNormalText = document.getElementById(`salary-normal-${emp.id}`);
             const salOtText = document.getElementById(`salary-ot-${emp.id}`);
             const salTotalText = document.getElementById(`salary-total-${emp.id}`);
-            
-            if(salNormalText) salNormalText.textContent = `ค่าแรงปกติ: ${normalPay.toLocaleString()} บาท (${stat.normalHrs} ชม.)`;
-            if(salOtText) salOtText.textContent = `ค่า OT: ${otPay.toLocaleString()} บาท (${stat.otHrs} ชม.)`;
-            if(salTotalText) salTotalText.textContent = `รวมเป็นเงิน: ${stat.totalPay.toLocaleString()} บาท`;
+            if(salNormalText) salNormalText.textContent = `ค่าแรงปกติ: ${(stat.normalHrs * emp.hourlyRate).toLocaleString()} บ.`;
+            if(salOtText) salOtText.textContent = `ค่า OT: ${(stat.otHrs * otRate).toLocaleString()} บ.`;
+            if(salTotalText) salTotalText.textContent = `รวมเป็นเงิน: ${stat.totalPay.toLocaleString()} บ.`;
         });
     }
 
-    // ---- SAVE & LOAD ----
-
     function saveSchedule() {
-        const key = getStorageKey(currentYear, currentMonth);
         try {
-            localStorage.setItem(key, JSON.stringify(scheduleData));
+            localStorage.setItem(getStorageKey(currentYear, currentMonth), JSON.stringify(scheduleData));
             updateSaveStatus('', true);
-        } catch (e) {
-            updateSaveStatus('ผิดพลาด: ไม่สามารถบันทึกได้');
-        }
+        } catch (e) { updateSaveStatus('ผิดพลาด: ไม่สามารถบันทึกได้'); }
     }
 
     function loadSchedule(year, month) {
-        const key = getStorageKey(year, month);
-        const savedDataString = localStorage.getItem(key);
-        if (savedDataString) {
+        const savedDataStr = localStorage.getItem(getStorageKey(year, month));
+        if (savedDataStr) {
             try {
-                const parsedData = JSON.parse(savedDataString);
+                const parsedData = JSON.parse(savedDataStr);
+                const exStart = new Date(year, month, 26); exStart.setMonth(exStart.getMonth() - 1);
+                const exStr = `${exStart.getFullYear()}-${String(exStart.getMonth() + 1).padStart(2, '0')}-${String(exStart.getDate()).padStart(2, '0')}`;
                 
-                // ✨ แก้บั๊ก: ตรวจสอบอย่างเข้มงวดว่า ข้อมูลที่โหลดมาเป็นวันที่ 26 ตรงเป๊ะไหม
-                // ถ้าไม่ตรง (เกิดจากของเก่าที่พังไปแล้ว) ให้โยนทิ้งและวาดใหม่ทันที
-                const expectedStartDate = new Date(year, month, 26);
-                expectedStartDate.setMonth(expectedStartDate.getMonth() - 1);
-                const expectedDateStr = `${expectedStartDate.getFullYear()}-${String(expectedStartDate.getMonth() + 1).padStart(2, '0')}-${String(expectedStartDate.getDate()).padStart(2, '0')}`;
+                if (parsedData.length === 0 || parsedData[0].date !== exStr) return false; 
                 
-                if (parsedData.length === 0 || parsedData[0].date !== expectedDateStr) {
-                    console.warn("ตรวจพบวันที่คลาดเคลื่อนในระบบเก่า ระบบทำการล้างตารางใหม่");
-                    return false; 
-                }
-
                 scheduleData = parsedData;
                 scheduleData.forEach(d => {
-                    const [y, m, dateDay] = d.date.split('-');
-                    d.fullDate = new Date(y, m - 1, dateDay);
-                    
-                    d.shifts.forEach(s => {
-                        if (s.slotName === 'เสริม:') {
-                            s.slotName = 'บ่าย (เสริม):';
-                            s.isExtra = true;
-                        }
-                    });
+                    const [y, m, dateDay] = d.date.split('-'); d.fullDate = new Date(y, m - 1, dateDay);
                 });
-                updateSaveStatus('โหลดข้อมูลที่บันทึกไว้แล้ว');
                 setTimeout(() => updateSaveStatus('', true), 1500);
                 return true;
             } catch (e) { return false; }
         }
-        updateSaveStatus('ยังไม่มีข้อมูลสำหรับรอบนี้');
         return false;
     }
 
     // ---- STAFF MANAGEMENT MODAL ----
-    
-    manageStaffBtn.addEventListener('click', () => {
-        renderStaffEditList();
-        staffModal.classList.remove('hidden');
-    });
-
+    manageStaffBtn.addEventListener('click', () => { renderStaffEditList(); staffModal.classList.remove('hidden'); });
     closeStaffModal.addEventListener('click', () => staffModal.classList.add('hidden'));
 
     function renderStaffEditList() {
         staffEditList.innerHTML = '';
-        employees.forEach((emp, index) => {
-            let offOptions = `<option value="-1">ไม่หยุดประจำ</option>`;
-            dayNames.forEach((d, dIdx) => {
-                offOptions += `<option value="${dIdx}" ${emp.prefOffDay == dIdx ? 'selected' : ''}>หยุด${d}</option>`;
-            });
+        const roleChoices = ['ทั่วไป', 'ต้อนรับ', 'แม่บ้าน', 'แคชเชียร์'];
 
-            const otRateVal = emp.otRate || (emp.hourlyRate * 1.5);
+        employees.forEach((emp, index) => {
+            let offOptions = `<option value="-1">ไม่มี</option>`;
+            dayNames.forEach((d, dIdx) => offOptions += `<option value="${dIdx}" ${emp.prefOffDay == dIdx ? 'selected' : ''}>หยุด${d}</option>`);
+            
+            let roleOptions = roleChoices.map(r => `<option value="${r}" ${emp.role === r ? 'selected' : ''}>${r}</option>`).join('');
+            let leaveStr = (emp.leaveRequests || []).join(', ');
 
             const row = document.createElement('div');
-            row.className = 'flex items-center gap-2 mb-2 bg-gray-50 p-2 rounded border flex-wrap md:flex-nowrap';
+            row.className = 'grid grid-cols-1 lg:grid-cols-12 gap-2 bg-gray-50 p-3 rounded border items-center';
             row.innerHTML = `
-                <input type="text" class="control-input flex-grow text-sm emp-name-edit min-w-[80px]" value="${emp.name}" data-idx="${index}" title="ชื่อ" placeholder="ชื่อ">
-                <input type="number" class="control-input w-20 text-sm emp-rate-edit" value="${emp.hourlyRate}" data-idx="${index}" title="เรทปกติ/ชม." placeholder="ปกติ/ชม.">
-                <input type="number" class="control-input w-20 text-sm emp-ot-edit" value="${otRateVal}" data-idx="${index}" title="เรท OT/ชม." placeholder="OT/ชม.">
-                <select class="control-input text-sm emp-off-edit w-28" title="วันหยุดประจำ">${offOptions}</select>
-                <button class="text-red-500 font-bold px-2 hover:bg-red-100 rounded" title="ลบพนักงาน" onclick="removeEmpInModal(${index})">X</button>
+                <div class="col-span-1 lg:col-span-3"><label class="lg:hidden text-xs text-gray-500">ชื่อ:</label><input type="text" class="control-input w-full text-sm emp-name-edit" value="${emp.name}" placeholder="ชื่อ"></div>
+                <div class="col-span-1 lg:col-span-2"><label class="lg:hidden text-xs text-gray-500">ตำแหน่ง:</label><select class="control-input w-full text-sm emp-role-edit">${roleOptions}</select></div>
+                <div class="col-span-1 lg:col-span-1"><label class="lg:hidden text-xs text-gray-500">เรทปกติ:</label><input type="number" class="control-input w-full text-sm emp-rate-edit" value="${emp.hourlyRate}" placeholder="ปกติ"></div>
+                <div class="col-span-1 lg:col-span-1"><label class="lg:hidden text-xs text-gray-500">เรท OT:</label><input type="number" class="control-input w-full text-sm emp-ot-edit" value="${emp.otRate || (emp.hourlyRate*1.5)}" placeholder="OT"></div>
+                <div class="col-span-1 lg:col-span-2"><label class="lg:hidden text-xs text-gray-500">วันหยุดประจำ:</label><select class="control-input w-full text-sm emp-off-edit">${offOptions}</select></div>
+                <div class="col-span-1 lg:col-span-2"><label class="lg:hidden text-xs text-gray-500">วันลา (คั่นด้วยลูกน้ำ):</label><input type="text" class="control-input w-full text-sm emp-leave-edit" value="${leaveStr}" placeholder="เช่น 2026-05-12, 2026-05-13"></div>
+                <div class="col-span-1 lg:col-span-1 text-right lg:text-center mt-2 lg:mt-0"><button class="text-red-500 font-bold px-3 py-1 bg-red-100 hover:bg-red-200 rounded w-full lg:w-auto" onclick="removeEmpInModal(${index})">ลบ</button></div>
             `;
             staffEditList.appendChild(row);
         });
     }
 
     function syncStaffInputs() {
-        const nameInputs = document.querySelectorAll('.emp-name-edit');
-        const rateInputs = document.querySelectorAll('.emp-rate-edit');
-        const otInputs = document.querySelectorAll('.emp-ot-edit');
-        const offInputs = document.querySelectorAll('.emp-off-edit');
+        const names = document.querySelectorAll('.emp-name-edit'), roles = document.querySelectorAll('.emp-role-edit');
+        const rates = document.querySelectorAll('.emp-rate-edit'), ots = document.querySelectorAll('.emp-ot-edit');
+        const offs = document.querySelectorAll('.emp-off-edit'), leaves = document.querySelectorAll('.emp-leave-edit');
         
-        nameInputs.forEach((input, i) => {
-            employees[i].name = input.value;
-            employees[i].hourlyRate = parseFloat(rateInputs[i].value) || 0;
-            employees[i].otRate = parseFloat(otInputs[i].value) || 0;
-            employees[i].prefOffDay = parseInt(offInputs[i].value);
+        names.forEach((input, i) => {
+            employees[i].name = input.value || 'ไม่ระบุชื่อ';
+            employees[i].role = roles[i].value;
+            employees[i].hourlyRate = parseFloat(rates[i].value) || 0;
+            employees[i].otRate = parseFloat(ots[i].value) || 0;
+            employees[i].prefOffDay = parseInt(offs[i].value);
+            employees[i].leaveRequests = leaves[i].value.split(',').map(s => s.trim()).filter(s => s.length > 0);
         });
     }
 
     addNewStaffBtn.addEventListener('click', () => {
         syncStaffInputs();
-        employees.push({ id: 'emp_' + Date.now(), name: 'ชื่อพนักงาน', hourlyRate: 50, otRate: 75, prefOffDay: -1 });
+        employees.push({ id: 'emp_' + Date.now(), name: 'พนักงานใหม่', role: 'ทั่วไป', hourlyRate: 50, otRate: 75, prefOffDay: -1, leaveRequests: [] });
         renderStaffEditList();
     });
 
     window.removeEmpInModal = function(index) {
-        if(confirm('ยืนยันลบรายชื่อพนักงานนี้ออกจากระบบ?\n(ข้อมูลกะเดิมที่เคยลงไว้ จะถูกเปลี่ยนเป็น "ว่าง" อัตโนมัติหลังกดบันทึก)')) {
-            syncStaffInputs();
-            employees.splice(index, 1);
-            renderStaffEditList();
+        if(confirm('ยืนยันลบพนักงานนี้?\n(กะเดิมจะถูกเปลี่ยนเป็น "ว่าง" หลังบันทึก)')) {
+            syncStaffInputs(); employees.splice(index, 1); renderStaffEditList();
         }
     }
 
     saveStaffBtn.addEventListener('click', () => {
         syncStaffInputs();
-        
-        employees.forEach(emp => {
-            if(!emp.name || emp.name.trim() === '') emp.name = 'ไม่ระบุชื่อ';
-        });
-
-        localStorage.setItem('pt_employees_orig_ot_final', JSON.stringify(employees));
+        localStorage.setItem('pt_employees_v4', JSON.stringify(employees));
         staffModal.classList.add('hidden');
-        
-        renderEmployeePanels();
-        // ✨ แก้บั๊ก: ให้วาดตารางโดยอิงจากข้อมูลตรงๆ
-        renderCalendarForPeriod();
+        updateFocusDropdown(); 
+        renderEmployeePanels(); renderCalendarForPeriod();
     });
 
+    // ---- DETAILED PAYSLIP LOGIC ----
+    window.openPayslip = function(empId) {
+        const emp = employees.find(e => e.id === empId);
+        if(!emp) return;
+
+        const otRate = emp.otRate || (emp.hourlyRate * 1.5);
+        document.getElementById('payslip-emp-name').textContent = `(${emp.name})`;
+        document.getElementById('payslip-emp-name').dataset.empName = emp.name;
+
+        let html = `
+            <div class="mb-3 text-sm text-gray-700 bg-gray-100 p-2 rounded inline-block">
+                <strong>เงื่อนไข:</strong> เรทปกติ ${emp.hourlyRate} บาท/ชม. | OT ${otRate} บาท/ชม. (ชั่วโมงที่เกิน 8 ชม./วัน)
+            </div>
+            <table class="w-full text-sm text-left border-collapse border border-gray-200 min-w-[500px]">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="border border-gray-300 p-2">วันที่</th>
+                        <th class="border border-gray-300 p-2">กะที่ทำงาน</th>
+                        <th class="border border-gray-300 p-2 text-center">ชม. ปกติ</th>
+                        <th class="border border-gray-300 p-2 text-center">ชม. OT</th>
+                        <th class="border border-gray-300 p-2 text-right">รายรับ (บาท)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let totalNormHrs = 0, totalOtHrs = 0, grandTotalPay = 0;
+
+        scheduleData.forEach(day => {
+            let myShifts = day.shifts.filter(s => s.empId === emp.id);
+            let totalDailyHrs = myShifts.reduce((sum, s) => sum + s.hrs, 0);
+
+            if (totalDailyHrs > 0) {
+                let dailyNormHrs = totalDailyHrs > 8 ? 8 : totalDailyHrs;
+                let dailyOtHrs = totalDailyHrs > 8 ? totalDailyHrs - 8 : 0;
+                let dailyPay = (dailyNormHrs * emp.hourlyRate) + (dailyOtHrs * otRate);
+
+                totalNormHrs += dailyNormHrs;
+                totalOtHrs += dailyOtHrs;
+                grandTotalPay += dailyPay;
+
+                let shiftsStr = myShifts.map(s => `${s.slotName.replace(':','')} (${s.hrs} ชม.)`).join(', ');
+
+                html += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="border border-gray-300 p-2">${day.day} ${shortMonthNames[day.month]} ${day.fullDate.getFullYear() + 543}</td>
+                        <td class="border border-gray-300 p-2 text-gray-600">${shiftsStr}</td>
+                        <td class="border border-gray-300 p-2 text-center font-medium">${dailyNormHrs}</td>
+                        <td class="border border-gray-300 p-2 text-center ${dailyOtHrs > 0 ? 'text-red-500 font-bold' : 'text-gray-400'}">${dailyOtHrs > 0 ? dailyOtHrs : '-'}</td>
+                        <td class="border border-gray-300 p-2 text-right font-medium text-blue-700">${dailyPay.toLocaleString()}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        if (totalNormHrs === 0) {
+            html += `<tr><td colspan="5" class="border border-gray-300 p-4 text-center text-gray-500">ไม่มีข้อมูลการเข้าทำงานในรอบบิลนี้</td></tr>`;
+        } else {
+            html += `
+                <tr class="bg-gray-100 font-bold text-gray-800 text-base">
+                    <td colspan="2" class="border border-gray-300 p-3 text-right">ยอดรวมทั้งสิ้น (รอบเดือน):</td>
+                    <td class="border border-gray-300 p-3 text-center text-blue-600">${totalNormHrs} ชม.</td>
+                    <td class="border border-gray-300 p-3 text-center text-red-600">${totalOtHrs} ชม.</td>
+                    <td class="border border-gray-300 p-3 text-right text-green-600">${grandTotalPay.toLocaleString()} บาท</td>
+                </tr>
+            `;
+        }
+
+        html += `</tbody></table>`;
+        document.getElementById('payslip-content').innerHTML = html;
+        document.getElementById('payslip-modal').classList.remove('hidden');
+    };
+
+    document.getElementById('close-payslip-modal').addEventListener('click', () => { document.getElementById('payslip-modal').classList.add('hidden'); });
+
+    window.printPayslip = function() {
+        const empName = document.getElementById('payslip-emp-name').dataset.empName;
+        const content = document.getElementById('payslip-content').innerHTML;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        
+        printWindow.document.write('<html><head><title>แจ้งรายละเอียดค่าแรง - ' + empName + '</title>');
+        printWindow.document.write('<style> body { font-family: "Sarabun", sans-serif; padding: 20px; color: #333; } table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; } th, td { border: 1px solid #999; padding: 8px; text-align: left; } th { background-color: #eee; } .text-center { text-align: center; } .text-right { text-align: right; } .bg-gray-100 { background-color: #f3f4f6; } .text-blue-600 { color: #2563eb; } .text-red-600 { color: #dc2626; } .text-green-600 { color: #16a34a; } </style></head><body>');
+        printWindow.document.write('<h2>ใบแจ้งรายละเอียดชั่วโมงทำงานและค่าแรง: ' + empName + '</h2>');
+        printWindow.document.write(content);
+        printWindow.document.write('</body></html>');
+        
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500);
+    };
+
     // ---- EVENT LISTENERS ----
-    
     monthSelect.addEventListener('change', () => { currentMonth = parseInt(monthSelect.value); updateCalendar(currentYear, currentMonth); });
     yearSelect.addEventListener('change', () => { currentYear = parseInt(yearSelect.value); updateCalendar(currentYear, currentMonth); });
     saveScheduleBtn.addEventListener('click', saveSchedule);
     printScheduleBtn.addEventListener('click', () => window.print());
     salaryToggle.addEventListener('change', () => salaryCard.classList.toggle('hidden'));
     autoScheduleBtn.addEventListener('click', autoSchedule);
-    
     clearScheduleBtn.addEventListener('click', () => {
-        if(confirm('ยืนยันล้างตารางทั้งหมดในรอบนี้? (ข้อมูลจะกลายเป็น ว่าง)')) {
-            // ✨ แก้บั๊ก: เวลาล้างตาราง ให้สร้างจากเดือน/ปี ที่เลือกจริงๆ ไม่ใช่ไปดึงจากของเก่าที่อาจจะเพี้ยนอยู่
-            const endDate = new Date(currentYear, currentMonth, 25);
-            const startDate = new Date(currentYear, currentMonth, 26);
-            startDate.setMonth(startDate.getMonth() - 1);
-            
-            initializeScheduleForPeriod(startDate, endDate);
-            renderCalendarForPeriod();
-            updateSaveStatus('มีการเปลี่ยนแปลงยังไม่บันทึก');
+        if(confirm('ล้างตารางทั้งหมดในรอบนี้?')) {
+            const end = new Date(currentYear, currentMonth, 25); const start = new Date(currentYear, currentMonth, 26); start.setMonth(start.getMonth() - 1);
+            initializeScheduleForPeriod(start, end); renderCalendarForPeriod(); updateSaveStatus('ยังไม่บันทึก');
         }
     });
 
     init();
 });
 </script>
-
 </body>
 </html>
