@@ -33,6 +33,17 @@
         
         .watermark-off { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: #9ca3af; opacity: 0.3; transform: rotate(-15deg); pointer-events: none; z-index: 10; letter-spacing: 0.05em; }
 
+        .weekend-cell { background-color: #f8faff; }
+        .shift-select.is-empty { background-color: #fffbeb; color: #b45309; border: 1px dashed #f59e0b; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23b45309' width='18px' height='18px'%3e%3cpath d='M7 10l5 5 5-5H7z'/%3e%3c/svg%3e"); }
+        .nav-btn { border: 1px solid #d1d5db; background: white; border-radius: 6px; padding: 4px 12px; color: #374151; font-size: 0.85rem; transition: background-color 0.15s, border-color 0.15s; flex-shrink: 0; }
+        .nav-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+        button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 10px 18px; border-radius: 8px; color: white; font-size: 0.875rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-success { background-color: #16a34a; } .toast-info { background-color: #2563eb; } .toast-error { background-color: #dc2626; }
+
         @media (max-width: 768px) {
             .day-header { display: none; }
             .calendar-grid { grid-template-columns: 1fr; gap: 12px; border: none; background: transparent; }
@@ -62,9 +73,12 @@
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800">โปรแกรมจัดการตารางงาน (ระบบ Part-time V4)</h1>
             <div class="flex flex-col md:flex-row justify-center items-center gap-4 mt-2">
                 <h2 id="month-name" class="text-xl md:text-2xl font-semibold text-gray-600"></h2>
-                <div class="flex gap-2 w-full md:w-auto print:hidden">
-                    <select id="month-select" class="control-input w-full md:w-32"></select>
-                    <select id="year-select" class="control-input w-full md:w-24"></select>
+                <div class="flex gap-2 w-full md:w-auto print:hidden items-center flex-wrap justify-center">
+                    <button id="prev-month-btn" class="nav-btn" title="รอบก่อนหน้า" aria-label="รอบก่อนหน้า">◀</button>
+                    <select id="month-select" class="control-input flex-grow md:flex-grow-0 md:w-32" aria-label="เลือกเดือน"></select>
+                    <select id="year-select" class="control-input md:w-24" aria-label="เลือกปี"></select>
+                    <button id="next-month-btn" class="nav-btn" title="รอบถัดไป" aria-label="รอบถัดไป">▶</button>
+                    <button id="today-btn" class="nav-btn font-medium text-blue-600 border-blue-300 hover:bg-blue-50" title="กลับมารอบเดือนปัจจุบัน">รอบปัจจุบัน</button>
                 </div>
             </div>
         </div>
@@ -102,6 +116,7 @@
             </div>
             
             <div id="schedule-warnings" class="text-sm text-red-600 font-semibold mt-3 p-2 bg-red-50 rounded hidden border border-red-200"></div>
+            <div id="empty-slot-info" class="hidden text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mt-3 font-medium print:hidden"></div>
             <div id="save-status" class="text-xs text-center text-gray-500 mt-2 font-medium h-4"></div>
 
             <div id="salary-summary-card" class="mt-4 pt-4 border-t">
@@ -135,6 +150,15 @@
             <div id="calendar-body" class="calendar-grid"></div>
         </div>
     </div>
+
+    <!-- แถบเตือนเมื่อยังไม่ได้บันทึก -->
+    <div id="unsaved-bar" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white pl-4 pr-2 py-2 rounded-full shadow-xl flex items-center gap-3 text-sm print:hidden max-w-[95vw]">
+        <span class="whitespace-nowrap">⚠️ ยังไม่ได้บันทึก</span>
+        <button id="unsaved-save-btn" class="bg-green-500 hover:bg-green-600 px-4 py-1 rounded-full font-bold transition whitespace-nowrap">💾 บันทึกเลย</button>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="print:hidden" aria-live="polite"></div>
 
     <!-- Modal จัดการพนักงาน -->
     <div id="staff-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
@@ -190,9 +214,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // ,{ id: 'shift_night', name: 'ดึก', timeText: '21.00 - 06.00 น.', workHours: 8 } 
     ];
 
+    const shiftIcons = ['☀️', '🌙', '🌟', '⏰'];
+
     let currentYear = now.getFullYear();
     let currentMonth = now.getMonth();
     let scheduleData = [];
+    let isDirty = false; // มีการแก้ไขที่ยังไม่บันทึกหรือไม่
     
     let employees = JSON.parse(localStorage.getItem('pt_employees_v4')) || [
         { id: 'emp_a', name: 'สมชาย', role: 'ต้อนรับ', hourlyRate: 50, otRate: 70, prefOffDay: -1, leaveRequests: [] }, 
@@ -247,6 +274,35 @@ document.addEventListener('DOMContentLoaded', () => {
             saveStatus.textContent = statusText;
             saveStatus.className = 'text-xs text-center text-red-500 font-semibold mt-2 h-4';
         }
+        setDirty(!isSaved);
+    }
+
+    function setDirty(dirty) {
+        isDirty = dirty;
+        document.getElementById('unsaved-bar').classList.toggle('hidden', !dirty);
+    }
+
+    // ถ้ามีการแก้ไขค้างอยู่ ให้ถามยืนยันก่อนเปลี่ยนรอบเดือน
+    function confirmLeaveUnsaved() {
+        return !isDirty || confirm('มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก หากเปลี่ยนรอบเดือนตอนนี้ข้อมูลที่แก้ไขจะหายไป\nต้องการดำเนินการต่อหรือไม่?');
+    }
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // หา template ของกะ (รองรับข้อมูลเก่าที่ไม่มี templateId โดยเทียบจากชื่อกะ)
+    function getTemplateForShift(shift) {
+        return shiftTemplates.find(t => shift.templateId === t.id || (!shift.templateId && shift.slotName && shift.slotName.startsWith(t.name))) || null;
     }
 
     function populateSelectors() {
@@ -259,8 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderLegend() {
-        let iconMap = ['☀️', '🌙', '🌟', '⏰'];
-        dynamicLegend.innerHTML = shiftTemplates.map((t, i) => `<span>${iconMap[i] || '🔸'} <strong>${t.name}:</strong> ${t.timeText}</span>`).join(' <span class="mx-2 text-gray-300">|</span> ') + ` <span class="ml-2 text-blue-600 font-semibold">(เกิน 8 ชม. คิด OT)</span>`;
+        dynamicLegend.innerHTML = shiftTemplates.map((t, i) => `<span>${shiftIcons[i] || '🔸'} <strong>${t.name}:</strong> ${t.timeText}</span>`).join(' <span class="mx-2 text-gray-300">|</span> ') + ` <span class="ml-2 text-blue-600 font-semibold">(เกิน 8 ชม. คิด OT)</span>`;
     }
 
     function updateFocusDropdown() {
@@ -281,6 +336,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (mode !== "balance-pay" && employees.length < parseInt(mode)) {
             alert(`ต้องมีพนักงานในระบบอย่างน้อย ${mode} คน จึงจะใช้สูตรรูปแบบนี้ได้ครับ`);
+            return;
+        }
+
+        // ป้องกันการเผลอทับตารางที่จัดไว้แล้ว
+        const hasExistingData = scheduleData.some(d => d.shifts.some(s => s.empId !== 'none'));
+        if (hasExistingData && !confirm('ตารางรอบนี้มีการจัดกะไว้แล้ว การจัดอัตโนมัติจะเขียนทับข้อมูลเดิมทั้งหมด\nต้องการดำเนินการต่อหรือไม่?')) {
             return;
         }
 
@@ -390,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderCalendarForPeriod();
         updateSaveStatus('จัดรูปแบบอัจฉริยะสำเร็จ (กรุณากดบันทึก)');
+        showToast('จัดกะอัตโนมัติสำเร็จ ✓ อย่าลืมกดบันทึกตาราง', 'info');
     }
 
     // ---- UI RENDERERS ----
@@ -415,10 +477,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">${emp.prefOffDay == -1 ? 'ไม่มีวันหยุด' : 'หยุด: '+dayNames[emp.prefOffDay]}</span>
                 </div>
                 <div class="pt-2 border-t text-xs pl-2">
-                    <div class="flex items-center gap-2 text-gray-600 mb-1">
-                        <span>กะรวม: <strong id="summary-work-${emp.id}" class="text-gray-800">0</strong></span>
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-600 mb-1">
+                        ${shiftTemplates.map((t, i) => `<span class="whitespace-nowrap">${shiftIcons[i] || '🔸'} ${t.name} <strong id="summary-tpl-${emp.id}-${t.id}" class="text-gray-800">0</strong> กะ</span>`).join('<span class="border-l h-3 border-gray-300"></span>')}
                         <span class="border-l h-3 border-gray-300"></span>
-                        <span>OT: <strong id="summary-ot-${emp.id}" class="text-orange-600">0</strong> ชม.</span>
+                        <span class="whitespace-nowrap">รวม <strong id="summary-work-${emp.id}" class="text-blue-700">0</strong> กะ</span>
+                        <span class="border-l h-3 border-gray-300"></span>
+                        <span class="whitespace-nowrap">OT <strong id="summary-ot-${emp.id}" class="text-orange-600">0</strong> ชม.</span>
                     </div>
                     ${leaveBadge}
                 </div>
@@ -432,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="font-bold text-gray-800">${emp.name}:</p>
                     <div class="mt-1 mb-2 text-xs text-gray-500">เรท: ${emp.hourlyRate} บ./ชม. | OT: ${otRate} บ./ชม.</div>
                     <ul class="list-disc list-inside ml-2 text-gray-600 text-sm space-y-1">
+                        <li id="salary-shifts-${emp.id}" class="text-gray-500">เข้ากะ: -</li>
                         <li id="salary-normal-${emp.id}">ค่าแรงปกติ: 0 บาท</li>
                         <li id="salary-ot-${emp.id}">ค่า OT: 0 บาท</li>
                         <li id="salary-total-${emp.id}" class="font-bold text-blue-700 mt-2 pt-2 border-t border-gray-200">รวม: 0 บาท</li>
@@ -454,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formattedEnd = `${endDate.getDate()} ${shortMonthNames[endDate.getMonth()]} ${endDate.getFullYear() + 543}`;
         document.getElementById('month-name').textContent = `รอบวันที่ ${formattedStart} - ${formattedEnd}`;
 
+        setDirty(false);
         if (!loadSchedule(year, month)) {
             initializeScheduleForPeriod(startDate, endDate);
         }
@@ -512,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.createElement('div');
             cell.className = 'calendar-cell';
             if (dayData.month !== currentMonth) cell.classList.add('other-month');
+            if ([0, 6].includes(dayData.fullDate.getDay())) cell.classList.add('weekend-cell');
 
             const dateStrTH = `${dayData.day}/${dayData.month+1}`;
             cell.innerHTML = `<div class="day-number ${isToday ? 'today' : ''}">
@@ -608,6 +675,16 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleWarnings.classList.add('hidden');
         }
 
+        // แจ้งจำนวนกะหลักที่ยังไม่ได้จัดคน (ฟันหลอ)
+        const emptySlotInfo = document.getElementById('empty-slot-info');
+        const emptyCount = scheduleData.reduce((sum, d) => sum + d.shifts.filter(s => s.empId === 'none' && !s.isExtra).length, 0);
+        if (emptyCount > 0) {
+            emptySlotInfo.textContent = `📋 มีกะที่ยังไม่ได้จัดคน ${emptyCount} ช่อง (ช่องสีเหลืองเส้นประในปฏิทิน)`;
+            emptySlotInfo.classList.remove('hidden');
+        } else {
+            emptySlotInfo.classList.add('hidden');
+        }
+
         validateAndSummarize();
     }
 
@@ -668,14 +745,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSelectColor(selectElement, empId) {
         selectElement.className = selectElement.className.replace(/\bcolor-\S+/g, '');
+        selectElement.classList.remove('is-empty');
         const empIndex = employees.findIndex(e => e.id === empId);
-        if (empId === 'none' || empIndex === -1) selectElement.classList.add('color-none');
+        if (empId === 'none' || empIndex === -1) selectElement.classList.add('color-none', 'is-empty');
         else selectElement.classList.add(`color-${empIndex % 5}`);
     }
 
     function validateAndSummarize() {
         const stats = {};
-        employees.forEach(e => stats[e.id] = { workShifts: 0, normalHrs: 0, otHrs: 0, totalPay: 0 });
+        employees.forEach(e => stats[e.id] = { workShifts: 0, normalHrs: 0, otHrs: 0, totalPay: 0, byTemplate: {} });
 
         scheduleData.forEach(day => {
             const dailyHrsByEmp = {};
@@ -683,6 +761,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (shift.empId !== 'none' && stats[shift.empId]) {
                     dailyHrsByEmp[shift.empId] = (dailyHrsByEmp[shift.empId] || 0) + shift.hrs;
                     stats[shift.empId].workShifts += 1;
+                    const tpl = getTemplateForShift(shift);
+                    if (tpl) stats[shift.empId].byTemplate[tpl.id] = (stats[shift.empId].byTemplate[tpl.id] || 0) + 1;
                 }
             });
             for (let empId in dailyHrsByEmp) {
@@ -705,6 +785,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if(summaryWork) summaryWork.textContent = stat.workShifts;
             if(summaryOt) summaryOt.textContent = stat.otHrs;
 
+            // อัปเดตจำนวนกะแยกตามประเภท (เช้า/บ่าย)
+            shiftTemplates.forEach(t => {
+                const el = document.getElementById(`summary-tpl-${emp.id}-${t.id}`);
+                if (el) el.textContent = stat.byTemplate[t.id] || 0;
+            });
+            const salShiftsText = document.getElementById(`salary-shifts-${emp.id}`);
+            if (salShiftsText) salShiftsText.textContent = 'เข้ากะ: ' + shiftTemplates.map(t => `${t.name} ${stat.byTemplate[t.id] || 0} กะ`).join(' | ') + ` (รวม ${stat.workShifts} กะ)`;
+
             const salNormalText = document.getElementById(`salary-normal-${emp.id}`);
             const salOtText = document.getElementById(`salary-ot-${emp.id}`);
             const salTotalText = document.getElementById(`salary-total-${emp.id}`);
@@ -718,7 +806,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             localStorage.setItem(getStorageKey(currentYear, currentMonth), JSON.stringify(scheduleData));
             updateSaveStatus('', true);
-        } catch (e) { updateSaveStatus('ผิดพลาด: ไม่สามารถบันทึกได้'); }
+            showToast('บันทึกตารางเรียบร้อยแล้ว ✓', 'success');
+        } catch (e) {
+            updateSaveStatus('ผิดพลาด: ไม่สามารถบันทึกได้');
+            showToast('เกิดข้อผิดพลาด ไม่สามารถบันทึกได้', 'error');
+        }
     }
 
     function loadSchedule(year, month) {
@@ -803,8 +895,9 @@ document.addEventListener('DOMContentLoaded', () => {
         syncStaffInputs();
         localStorage.setItem('pt_employees_v4', JSON.stringify(employees));
         staffModal.classList.add('hidden');
-        updateFocusDropdown(); 
+        updateFocusDropdown();
         renderEmployeePanels(); renderCalendarForPeriod();
+        showToast('บันทึกข้อมูลพนักงานเรียบร้อยแล้ว ✓', 'success');
     });
 
     // ---- DETAILED PAYSLIP LOGIC ----
@@ -834,12 +927,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         let totalNormHrs = 0, totalOtHrs = 0, grandTotalPay = 0;
+        let countByTemplate = {}, totalShiftCount = 0;
 
         scheduleData.forEach(day => {
             let myShifts = day.shifts.filter(s => s.empId === emp.id);
             let totalDailyHrs = myShifts.reduce((sum, s) => sum + s.hrs, 0);
 
             if (totalDailyHrs > 0) {
+                myShifts.forEach(s => {
+                    const tpl = getTemplateForShift(s);
+                    if (tpl) countByTemplate[tpl.id] = (countByTemplate[tpl.id] || 0) + 1;
+                    totalShiftCount++;
+                });
                 let dailyNormHrs = totalDailyHrs > 8 ? 8 : totalDailyHrs;
                 let dailyOtHrs = totalDailyHrs > 8 ? totalDailyHrs - 8 : 0;
                 let dailyPay = (dailyNormHrs * emp.hourlyRate) + (dailyOtHrs * otRate);
@@ -876,6 +975,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         html += `</tbody></table>`;
+
+        if (totalShiftCount > 0) {
+            const countStr = shiftTemplates.map((t, i) => `${shiftIcons[i] || '🔸'} ${t.name} ${countByTemplate[t.id] || 0} กะ`).join(' | ');
+            html += `<div class="mt-3 text-sm font-medium text-gray-700 bg-blue-50 border border-blue-100 p-2 rounded inline-block"><strong>สรุปจำนวนกะ:</strong> ${countStr} (รวมทั้งหมด ${totalShiftCount} กะ)</div>`;
+        }
+
         document.getElementById('payslip-content').innerHTML = html;
         document.getElementById('payslip-modal').classList.remove('hidden');
     };
@@ -898,9 +1003,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ---- EVENT LISTENERS ----
-    monthSelect.addEventListener('change', () => { currentMonth = parseInt(monthSelect.value); updateCalendar(currentYear, currentMonth); });
-    yearSelect.addEventListener('change', () => { currentYear = parseInt(yearSelect.value); updateCalendar(currentYear, currentMonth); });
+    monthSelect.addEventListener('change', () => {
+        if (!confirmLeaveUnsaved()) { monthSelect.value = currentMonth; return; }
+        currentMonth = parseInt(monthSelect.value); updateCalendar(currentYear, currentMonth);
+    });
+    yearSelect.addEventListener('change', () => {
+        if (!confirmLeaveUnsaved()) { yearSelect.value = currentYear; return; }
+        currentYear = parseInt(yearSelect.value); updateCalendar(currentYear, currentMonth);
+    });
+
+    // ปุ่มเลื่อนรอบเดือน ◀ ▶ และกลับรอบปัจจุบัน
+    function shiftPeriod(delta) {
+        if (!confirmLeaveUnsaved()) return;
+        let newMonth = currentMonth + delta, newYear = currentYear;
+        if (newMonth < 0) { newMonth = 11; newYear--; }
+        if (newMonth > 11) { newMonth = 0; newYear++; }
+        if (![...yearSelect.options].some(o => parseInt(o.value) === newYear)) return; // เกินช่วงปีที่รองรับ
+        currentMonth = newMonth; currentYear = newYear;
+        monthSelect.value = currentMonth; yearSelect.value = currentYear;
+        updateCalendar(currentYear, currentMonth);
+    }
+    document.getElementById('prev-month-btn').addEventListener('click', () => shiftPeriod(-1));
+    document.getElementById('next-month-btn').addEventListener('click', () => shiftPeriod(1));
+    document.getElementById('today-btn').addEventListener('click', () => {
+        if (!confirmLeaveUnsaved()) return;
+        currentYear = now.getFullYear(); currentMonth = now.getMonth();
+        monthSelect.value = currentMonth; yearSelect.value = currentYear;
+        updateCalendar(currentYear, currentMonth);
+    });
+
     saveScheduleBtn.addEventListener('click', saveSchedule);
+    document.getElementById('unsaved-save-btn').addEventListener('click', saveSchedule);
     printScheduleBtn.addEventListener('click', () => window.print());
     salaryToggle.addEventListener('change', () => salaryCard.classList.toggle('hidden'));
     autoScheduleBtn.addEventListener('click', autoSchedule);
@@ -908,7 +1041,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if(confirm('ล้างตารางทั้งหมดในรอบนี้?')) {
             const end = new Date(currentYear, currentMonth, 25); const start = new Date(currentYear, currentMonth, 26); start.setMonth(start.getMonth() - 1);
             initializeScheduleForPeriod(start, end); renderCalendarForPeriod(); updateSaveStatus('ยังไม่บันทึก');
+            showToast('ล้างตารางแล้ว (ยังไม่ได้บันทึก)', 'info');
         }
+    });
+
+    // กด Ctrl+S / Cmd+S เพื่อบันทึกตาราง
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveSchedule(); }
+    });
+
+    // เตือนก่อนปิด/รีเฟรชหน้า หากยังไม่ได้บันทึก
+    window.addEventListener('beforeunload', (e) => {
+        if (isDirty) { e.preventDefault(); e.returnValue = ''; }
     });
 
     init();
