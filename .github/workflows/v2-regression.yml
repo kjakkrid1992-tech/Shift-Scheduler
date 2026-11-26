@@ -54,6 +54,11 @@ jobs:
           done
           test "$failures" -eq 0
 
+      - name: V8 legacy converter regression
+        if: github.ref == 'refs/heads/development-v8'
+        run: |
+          python -m pip install -r scripts/requirements-legacy.txt
+          python tests/test_legacy_converter.py
       - name: V8 Chromium and Open Source POC
         if: github.ref == 'refs/heads/development-v8'
         env:
