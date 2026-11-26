@@ -2,16 +2,16 @@
 'use strict';
 // One-machine, local-only runtime. No login to Supabase cloud, project creation, reset or linking.
 // Requires Node.js LTS, local Docker-compatible runtime and standalone Supabase CLI.
-const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),{spawnSync}=require('node:child_process'),{randomBytes}=require('node:crypto'),R=require('../v8/runtime-config.js');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),{spawnSync}=require('node:child_process'),{randomBytes}=require('node:crypto'),R=require('../v8/runtime-config.js'),G=require('./local-v8-guard.cjs');
 const root=path.resolve(__dirname,'..'),work=path.join(root,'local-v8-runtime'),tools=path.join(root,'.v8-test-tools'),publicDir=path.join(root,'v8');
-function run(cmd,args,{cwd=work,capture=false}={}){const q=spawnSync(cmd,args,{cwd,encoding:'utf8',maxBuffer:8*1024*1024,stdio:capture?['ignore','pipe','pipe']:'inherit'});if(q.error||q.status!==0)throw Error(cmd+' '+args[0]+' failed. Check local prerequisites and CLI output. '+(q.error?.message||''));return capture?q.stdout:''}
+function run(cmd,args,{cwd=work,capture=false}={}){const q=spawnSync(cmd,args,{cwd,env:cmd==='supabase'?G.localSupabaseEnv(process.env):process.env,encoding:'utf8',maxBuffer:8*1024*1024,stdio:capture?['ignore','pipe','pipe']:'inherit'});if(q.error||q.status!==0)throw Error(cmd+' '+args[0]+' failed. Check local prerequisites and CLI output. '+(q.error?.message||''));return capture?q.stdout:''}
 function cli(args,capture=false){return run('supabase',args,{capture})}
 function npm(args){if(process.platform==='win32'){const p=path.join(path.dirname(process.execPath),'node_modules','npm','bin','npm-cli.js');if(!fs.existsSync(p))throw Error('Node.js with npm is required.');return run(process.execPath,[p,...args],{cwd:root})}return run('npm',args,{cwd:root})}
 function localWork(){
  fs.mkdirSync(work,{recursive:true});
  if(fs.lstatSync(work).isSymbolicLink())throw Error('Local runtime must not be a symlink');
  const dir=path.join(work,'supabase');
- if(fs.existsSync(path.join(dir,'.temp','project-ref'))||fs.existsSync(path.join(dir,'.branches')))throw Error('Linked or branch directory detected. Refusing to touch it.');
+ if(fs.existsSync(path.join(dir,'.temp','project-ref')))throw Error('Linked project detected. Refusing to touch it.');
  let cfg=['config.toml','config.jsonc'].map(x=>path.join(dir,x)).find(x=>fs.existsSync(x));
  if(!cfg){cli(['init']);cfg=['config.toml','config.jsonc'].map(x=>path.join(dir,x)).find(x=>fs.existsSync(x))}
  if(!cfg)throw Error('Supabase CLI did not generate local config');
@@ -50,6 +50,7 @@ async function users(c,status){
 function serve(config,sdk){
  const bodyConfig='window.STAFF_CONFIG='+JSON.stringify({...config,localOnly:true})+';\n';
  const server=http.createServer((req,res)=>{try{
+  if(!['127.0.0.1:5501','localhost:5501'].includes(req.headers.host)){res.writeHead(403);res.end();return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
   const u=new URL(req.url,'http://127.0.0.1:5501'),p=u.pathname;
   const reply=(type,b)=>{res.setHeader('Content-Type',type);res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(req.method==='HEAD'?undefined:b)};
@@ -63,7 +64,7 @@ function serve(config,sdk){
 }
 async function main(){
  if(process.argv.length!==2)throw Error('Usage: node scripts/start-v8-local.cjs');
- run('docker',['info','--format','{{.ServerVersion}}'],{cwd:root});run('supabase',['--version'],{cwd:root});
+ G.assertDockerLocal();run('docker',['info','--format','{{.ServerVersion}}'],{cwd:root});run('supabase',['--version'],{cwd:root});
  localWork();console.log('Starting local Supabase stack (no cloud project).');cli(['start'],true);
  const status=JSON.parse(cli(['status','-o','json'],true)),config=validateStatus(status);
  // Check migration before creating accounts. No reset or cloud link.

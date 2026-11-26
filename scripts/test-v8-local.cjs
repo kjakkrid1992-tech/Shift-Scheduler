@@ -2,7 +2,7 @@
 'use strict';
 // Local-only validation: no GitHub Actions, Supabase cloud, or paid API.
 // Default: all Node suites and syntax checks. --full: disposable local PostgreSQL + Chromium + Python.
-const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process'),{randomUUID}=require('node:crypto');
+const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process'),{randomUUID}=require('node:crypto'),G=require('./local-v8-guard.cjs');
 const root=path.resolve(__dirname,'..'),tools=path.join(root,'.v8-test-tools');
 const sleep=ms=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms);
 function run(cmd,args,options={}){const q=spawnSync(cmd,args,{cwd:root,stdio:'inherit',...options});if(q.error||q.status!==0)throw Error(cmd+' '+args[0]+' failed: '+(q.error?.message||q.status));return q}
@@ -10,7 +10,7 @@ function npm(args){if(process.platform==='win32'){const cli=path.join(path.dirna
 const scripts=folder=>fs.readdirSync(path.join(root,folder)).filter(n=>n.endsWith('.js')).map(n=>path.join(folder,n));
 function units(){
  const suites=fs.readdirSync(path.join(root,'tests')).filter(n=>n.endsWith('.test.js')).map(n=>path.join('tests',n));
- for(const p of [...scripts('v2'),...scripts('v8'),'tests/v8-browser.cjs','scripts/test-v8-local.cjs','scripts/start-v8-local.cjs'])run(process.execPath,['--check',p]);
+ for(const p of [...scripts('v2'),...scripts('v8'),'tests/v8-browser.cjs','scripts/test-v8-local.cjs','scripts/start-v8-local.cjs','scripts/local-v8-guard.cjs'])run(process.execPath,['--check',p]);
  run(process.execPath,['--test',...suites]);
  console.log('PASS Node unit suites and JS syntax');
 }
@@ -22,7 +22,7 @@ function findBrowser(){
  const bin=candidates.find(x=>fs.existsSync(x));if(!bin)throw Error('Install free Chrome/Chromium/Edge or set CHROME_BIN to its executable.');return bin
 }
 function full(){
- const chrome=findBrowser();run('docker',['info','--format','{{.ServerVersion}}']);
+ const chrome=findBrowser();G.assertDockerLocal();run('docker',['info','--format','{{.ServerVersion}}']);
  fs.mkdirSync(tools,{recursive:true});npm(['install','--prefix',tools,'--no-audit','--no-fund','--ignore-scripts','--save-exact','playwright-core@1.65.1']);
  const python=process.platform==='win32'?'py':'python3',pyArgs=process.platform==='win32'?['-3']:[];
  const venv=path.join(tools,'legacy-venv');if(!fs.existsSync(venv))run(python,[...pyArgs,'-m','venv',venv]);
