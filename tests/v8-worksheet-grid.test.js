@@ -12,3 +12,11 @@ assert.equal(G.stagePaste(rows,0,'kind','ลา',editable)[0].patch.kind,'leave'
 assert.equal(G.stagePaste(rows,0,'normalM','300',editable)[0].patch.manualNormal,true);
 assert.equal(G.stagePaste([{...base(),manualNormal:true,normalM:240}],0,'start','06:30\t15:30\t0\t60',editable)[0].patch.normalM,undefined);
 console.log('PASS V8 worksheet paste validation and locked rows');
+
+const first={...base(),employment:'one',start:'06:30',end:'15:30',breakM:60,normalM:480};
+assert.throws(()=>G.stagePaste([first,{...first,employment:'two'}],0,'start','06:30\n07:00',editable),/ข้ามพนักงาน/);
+assert.equal(G.stagePaste([first],0,'breakM','\t300',editable)[0].patch.normalM,300);
+assert.equal(G.stagePaste([first],0,'start','07:30\t08:00\t0\t60',editable)[0].patch.normalM,'');
+assert.equal(G.stagePaste([first],0,'start','07:30\t08:30\t0\t',editable)[0].patch.normalM,'');
+assert.equal(first.normalM,480);
+console.log('PASS cross-employee paste and invalid automatic minute clearing');

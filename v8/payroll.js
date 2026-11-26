@@ -81,8 +81,8 @@ $('prMatrixApplyNote').onclick=()=>{const note=$('prMatrixNote').value.trim();if
 $('prMatrixSave').onclick=()=>run(async t=>{
  if(!range||closure)throw Error('รอบนี้ไม่เปิดให้แก้ไข');if(matrixRows.some(r=>r.changed&&!r.selected))throw Error('มีแถวที่แก้ไขแต่ไม่ได้เลือก กรุณาเลือกให้ครบก่อนบันทึกเพื่อไม่ให้ข้อมูลสูญหาย');const selected=matrixRows.filter(r=>r.selected);if(!selected.length)return;
  const payload=selected.map(r=>{try{const v=matrixValues(r);if(v.net<0)throw Error('ยอดสุทธิติดลบ');const note=r.note.trim();if(!note)throw Error('ระบุบันทึกตรวจยอด');return {employment:r.src.employment_id,revision:r.rev,source:r.src,items:v.items,note}}catch(e){throw Error(r.src.employee_code+' · '+e.message)}});
- if(!confirm('ยืนยันตรวจยอดและบันทึกฉบับร่าง '+payload.length+' คน? ยังไม่อนุมัติหรือจ่ายจริง'))return;
- unwrap(await db.rpc('save_payroll_period_drafts',{p_month:range.month,p_rows:payload}));if(t!==epoch)return;matrixDirty=false;await overview(t);if(t!==epoch)return;await matrixLoad(t,true);if(t===epoch)msg('บันทึกฉบับร่างพร้อมกัน '+payload.length+' คนแล้ว')
+ const stale=selected.filter(r=>r.stale||r.legacy);if(stale.length&&!confirm('ข้อมูลต้นทางเปลี่ยนหรือเป็นยอดเก่าของ '+stale.map(r=>r.src.employee_code).join(', ')+' — ยืนยันว่าตรวจเทียบข้อมูลใหม่ทุกยอดและแยกรายการเดิมแล้ว?'))return;if(!confirm('ยืนยันตรวจยอดและบันทึกฉบับร่าง '+payload.length+' คน? ยังไม่อนุมัติหรือจ่ายจริง'))return;
+ const result=unwrap(await db.rpc('save_payroll_period_drafts',{p_month:range.month,p_rows:payload}));if(t!==epoch)return;const replies=window.V8Runtime.validateBatchReply(result,payload.map(x=>({employment:x.employment,revision:x.revision+1})),x=>x.employment);for(const r of selected){const z=replies.get(r.src.employment_id);r.rev=z.revision;r.changed=false;r.stale=false;r.legacy=false;r.selected=false}matrixDirty=false;renderMatrix();try{await overview(t);if(t!==epoch)return;msg('บันทึกฉบับร่างพร้อมกัน '+payload.length+' คนแล้ว')}catch(err){if(t===epoch){hide('prClose');msg('บันทึกฉบับร่างสำเร็จ แต่โหลดภาพรวมไม่สำเร็จ · โหลดรายชื่อใหม่ก่อนปิดรอบ',true)}}
 });
 
 function items(){return Object.fromEntries(E.keys.map(k=>[k,E.parseAmount(f[k].value)]))}

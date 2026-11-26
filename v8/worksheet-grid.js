@@ -18,7 +18,7 @@ function stagePaste(rows,index,field,text,canEdit){
  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/\n$/,'').split('\n');
  if(lines.length>200||index+lines.length>rows.length)throw Error('ข้อมูลเกินจำนวนแถวที่แสดง');
  return lines.map((line,i)=>{
-  const row=rows[index+i],cells=line.split('\t');if(!canEdit(row))throw Error('แถว '+(i+1)+' ถูกล็อก');
+  const row=rows[index+i],cells=line.split('\t');if(row.employment!==rows[index].employment)throw Error('ข้อมูลที่วางข้ามพนักงาน — แบ่งวางทีละคน');if(!canEdit(row))throw Error('แถว '+(i+1)+' ถูกล็อก');
   if(cells.length+start>fields.length)throw Error('ข้อมูลเกินคอลัมน์ที่แก้ไขได้');
   if(cells.some(c=>c.startsWith('"')&&c.endsWith('"')))throw Error('ไม่รองรับ Excel cell ที่มีอักขระพิเศษแบบ quoted; ใช้ข้อความธรรมดา');
   const patch={},next={...row};for(let k=0;k<cells.length;k++){const name=fields[start+k];patch[name]=parse(name,cells[k]);next[name]=patch[name]}
@@ -27,7 +27,7 @@ function stagePaste(rows,index,field,text,canEdit){
   if(next.kind!=='work'&&['start','end','overnight','breakM','normalM'].some(k=>Object.prototype.hasOwnProperty.call(patch,k)&&patch[k]!==''&&patch[k]!==0&&patch[k]!==false))throw Error('แถว '+(i+1)+' ไม่ใช่วันทำงาน');
   if(next.kind&&next.kind!=='work'){Object.assign(patch,{start:'',end:'',overnight:false,breakM:0,normalM:0,manualNormal:false})}
   else if(Object.prototype.hasOwnProperty.call(patch,'normalM'))patch.manualNormal=true;
-  else if(!next.manualNormal&&['start','end','overnight','breakM'].some(k=>k in patch)){try{if(String(next.breakM).trim()!=='')patch.normalM=Math.min(480,E.netMinutes(next.start,next.end,!!next.overnight,Number(next.breakM)))}catch{patch.normalM=''}}
+  else if(!next.manualNormal&&['start','end','overnight','breakM'].some(k=>k in patch)){try{patch.normalM=String(next.breakM??'').trim()===''?'':Math.min(480,E.netMinutes(next.start,next.end,!!next.overnight,Number(next.breakM)))}catch{patch.normalM=''}}
   return {row,patch};
  });
 }

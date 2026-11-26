@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),R=require('../v8/runtime-config.js');
+const jwt=role=>'eyJhbGciOiJIUzI1NiJ9.'+btoa(JSON.stringify({role})).replace(/=+$/,'')+'.sig';
+assert.deepEqual(R.normalizeConfig({url:'http://127.0.0.1:54321/',publishableKey:jwt('anon')}),{url:'http://127.0.0.1:54321',publishableKey:jwt('anon'),local:true});
+assert.equal(R.normalizeConfig({url:'https://abc.supabase.co',publishableKey:'sb_publishable_abc'}).local,false);
+for(const url of ['http://abc.supabase.co','https://abc.supabase.co.evil.com','http://192.168.1.1:54321','http://127.0.0.1:54322','https://a.supabase.co/path','http://localhost:54321@evil.com','javascript:alert(1)'])assert.throws(()=>R.normalizeConfig({url,publishableKey:'sb_publishable_abc'}));
+for(const key of ['sb_secret_abc',jwt('service_role'),jwt('authenticated'),''])assert.throws(()=>R.normalizeConfig({url:'http://localhost:54321',publishableKey:key}));
+assert.throws(()=>R.normalizeConfig({url:'https://abc.supabase.co',publishableKey:jwt('anon')}));
+let memory={};const storage={getItem:k=>memory[k],setItem:(k,v)=>memory[k]=v};
+assert.equal(R.resolveConfig(storage,{}),null);R.saveConfig(storage,{url:'http://localhost:54321',publishableKey:'sb_publishable_local'});assert.equal(R.resolveConfig(storage,{}).local,true);memory[R.storageKey]='invalid json';assert.equal(R.resolveConfig(storage,{url:'https://abc.supabase.co',publishableKey:'sb_publishable_abc'}).local,false);
+const key=x=>x.employment+'|'+x.day,expected=[{employment:'a',day:'d',revision:2,status:'verified',id:'r1'},{employment:'b',day:'d',revision:3,status:'verified'}],reply=[{employment:'b',day:'d',revision:3,status:'verified',id:'r2'},{employment:'a',day:'d',revision:2,status:'verified',id:'r1'}];
+assert.equal(R.validateBatchReply(reply,expected,key).get('a|d').id,'r1');
+for(const invalid of [null,[],[reply[0],reply[0]],[reply[0],{...reply[1],revision:1}],[reply[0],{...reply[1],status:'draft'}],[reply[0],{...reply[1],id:'wrong'}],[reply[0],{...reply[1],id:''}],[reply[0],{...reply[1],employment:'c'}]])assert.throws(()=>R.validateBatchReply(invalid,expected,key));
+console.log('PASS config endpoint/key restrictions and batch response integrity');
