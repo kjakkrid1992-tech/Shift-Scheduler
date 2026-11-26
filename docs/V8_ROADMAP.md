@@ -9,3 +9,5 @@ M10: SQL/JS/browser test, verified payroll policy, historical reconciliation and
 M11: production cutover blocked until actual rates/dates, lawful OT/deductions/tax/social security, backup/restore and parallel payroll approved. No production credentials or real data in Git.
 Open v8/index.html via Live Server only with a dedicated sandbox project; v8/config.js intentionally blank. Do not copy v2 production config. V8 SQL migration additive behavior (nullable plan reference; existing attendance snapshots unchanged). Reverting frontend alone does not roll back DB schema. Never drop actual unscheduled rows; restore rehearsal or forward-compatible fix before live migration.
 Sources: https://github.com/tabulator-tables/tabulator ; https://www.tabulator.info/docs/6.x/clipboard/ ; https://github.com/6pac/SlickGrid ; https://github.com/frappe/hrms ; https://github.com/horilla/horilla-hr
+
+Browser harness executes actual Chromium against disposable PostgreSQL through a test-only transport with synthetic auth claims; no deployed Supabase Auth/PostgREST is tested. Tabulator POC uses pinned test-only dependency. No production runtime dependency added.

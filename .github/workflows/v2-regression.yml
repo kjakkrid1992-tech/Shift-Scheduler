@@ -53,3 +53,15 @@ jobs:
             echo "::endgroup::"
           done
           test "$failures" -eq 0
+
+      - name: V8 Chromium and Open Source POC
+        if: github.ref == 'refs/heads/development-v8'
+        env:
+          V8_TOOLS: ${{ runner.temp }}/v8-tools
+        run: |
+          set -e
+          npm install --prefix "$V8_TOOLS" --no-audit --no-fund --ignore-scripts --save-exact playwright-core@1.65.1 tabulator-tables@6.7.1
+          export NODE_PATH="$V8_TOOLS/node_modules"
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME_BIN"
+          node tests/v8-browser.cjs
