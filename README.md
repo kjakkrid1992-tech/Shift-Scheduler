@@ -15,3 +15,5 @@ See [Phase 5A setup](docs/PHASE5_SETUP.md).
 Phase 5B.1 structured drafts: [setup and boundaries](docs/PHASE5B_ITEMS.md).
 
 Phase 5B.2 pilot: [close and payment setup](docs/PHASE5B_CLOSE.md).
+
+Phase 6A historical archive: [setup](docs/PHASE6_SETUP.md).

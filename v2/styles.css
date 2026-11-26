@@ -17,3 +17,5 @@ html{scroll-padding-top:90px}.date-hint{display:block;font-size:11px;font-weight
 #prForm h3{margin:22px 0 8px;border-bottom:1px solid #dce3ec;padding-bottom:6px}#prZeroExtras{margin:10px 0}#prSlip td:last-child{text-align:right;white-space:nowrap}
 
 #prOverview{margin:18px 0;padding:14px;border:1px solid #dce3ec;border-radius:8px}#prOverview input{min-width:160px}#prOverview textarea{width:100%;font:inherit;padding:8px;border:1px solid #c7d0da;border-radius:8px}#prFinalActions{margin-top:16px;padding:12px;border:1px solid #dce3ec;border-radius:8px}
+
+#legacyPreview,#legacyDetail{margin:16px 0;padding:12px;border:1px solid #dce3ec;border-radius:8px}#legacyPreviewRows td,#legacyRows td{vertical-align:top;overflow-wrap:anywhere}#legacyPreviewRows input[type=checkbox]{width:auto;min-width:18px}#legacyDetail button,#legacyPreview button{margin:5px 4px 5px 0}
