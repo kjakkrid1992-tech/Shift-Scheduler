@@ -23,3 +23,5 @@ Phase 6B reviewed staff migration: [setup](docs/PHASE6B_SETUP.md).
 Phase 7.1: [calendar-first schedule pilot](docs/PHASE7_CALENDAR.md).
 
 Phase 7.2–7.5: [bulk attendance and reporting pilot](docs/PHASE7_BULK_REPORT.md).
+
+Phase 7.6B: separate post-payment cash adjustments (01400), see consolidated acceptance guide. No automatic withholding or modification of original payroll.
