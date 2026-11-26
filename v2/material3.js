@@ -1,0 +1,1 @@
+(function(){'use strict';const $=id=>document.getElementById(id);for(const [a,b] of [['m3QuickAttendance','tabAttendance'],['m3QuickSchedule','tabSchedule'],['m3QuickAdvance','tabAdvance'],['m3QuickPayroll','tabPayroll']])$(a).addEventListener('click',()=>{if(!$(b).disabled)$(b).click()});})();

@@ -1,0 +1,14 @@
+# Material 3 redesign — based on 7.9 RC2
+Base: 4c7a3b190698232ddde386c086f7788323f7bb68. Branch ux-material3. No changes to Supabase, RPCs, payroll or schedule engines. Do not merge until browser UAT. The active pilot is separate.
+
+## 1. IA and flow
+Manager: Overview → schedule confirmed → Attendance → period/department → person → choose actual shift or off/leave → exceptions expand inline → save or send to owner. Owner: overview → Attendance → verified records of selected person → approve → payroll comparison. Daily editor remains for reopening/history. Staff master, advance, payroll, archive retain existing permissions and workflow; style and labels updated. No automatic actual work/off; suggested times require real evidence. The main CTA is send for review (manager) or approve verified (owner); save draft and bulk entry secondary. Historical test must be isolated from real financial close/payment.
+
+## 2. Tokens
+Primary #245A74/on-primary #FFFFFF; primary container #C7E7FA/on #063449; surface #FBFCFE; surface container #EEF3F7; high #E4EBF1; text #17272F; muted #4B5F6B; outline #687D89; error #A12525/on container #FDE8E5; success #236440/#DDF3E5; warning #795305/#FFF1D2. 8px spacing, 8/16/24px shapes, subtle 1–2 elevation. System Thai font; H1 28/700, H2 22/650, H3 18/650, body 16, label 14/600, caption 13. Minimum 48px for primary controls; checkbox label 48px. Focus outlines, textual status labels, reduced motion, responsive mobile cards. No claim of full WCAG certification.
+
+## 3. Implementation
+HTML + JS kept in existing v2. CSS tokens and components in material3.css. Tailwind v3 source in design; utility subset is checked in as static CSS fallback so field staff never need Node, CMD or CDN. CI compiles pinned Tailwind utilities as build validation. Desktop table/mobile cards. UI states gallery at v2/material-states.html (no database). Real Attendance uses existing save/transition RPCs, separate day transactions; partial failures visible. Normal minutes default max 480 only when preset or user changes work times; user can adjust. Presets are based on existing RC2, custom blank, no guessed work data. No schema migration.
+
+## 4. States
+Default: actual date/plan/shift selection and saved status. Loading: indeterminate progress + disable navigation/controls; submission progress with day count. Empty: no period/no confirmed plan, action to schedule; no eligible workers, choose another scope. Error: message, invalid field, inline row reason, preserve rows; stale reload warning. Disabled: future day and verified/approved read-only, role controls, no changes no save. Mobile cards keep each day's inputs and status in one group. Full UAT still necessary for actual accounts/browser and historical payroll.

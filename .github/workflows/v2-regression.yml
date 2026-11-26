@@ -1,7 +1,7 @@
 name: V2 isolated regression
 on:
   push:
-    branches: [development-v2]
+    branches: [development-v2, ux-material3]
   workflow_dispatch:
 permissions:
   contents: read
@@ -53,3 +53,11 @@ jobs:
             echo "::endgroup::"
           done
           test "$failures" -eq 0
+
+  material-build:
+    if: github.ref_name == 'ux-material3'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile pinned Tailwind utilities
+        run: npx --yes tailwindcss@3.4.17 -c design/tailwind.config.cjs -i design/tailwind.input.css -o /tmp/material-tailwind.css --minify
