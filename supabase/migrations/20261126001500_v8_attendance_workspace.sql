@@ -108,16 +108,16 @@ grant execute on function public.save_attendance_period(date,uuid,text,jsonb) to
 
 -- Capability check prevents V8 UI from mutating a baseline-only backend.
 create function public.v8_workspace_capabilities()
-returns jsonb language plpgsql stable security invoker set search_path='' as $
+returns jsonb language plpgsql stable security invoker set search_path='' as $$
 begin
  if coalesce(staff_private.staff_role(),'') not in ('owner','manager') then raise exception using errcode='42501',message='Staff access required';end if;
  return jsonb_build_object('version',8,'attendance_batch',true,'payroll_batch',true);
-end $;
+end $$;
 revoke all on function public.v8_workspace_capabilities() from public,anon,authenticated;
 grant execute on function public.v8_workspace_capabilities() to authenticated;
 -- Transactional payroll draft worksheet; original save_payroll_items rechecks source and revision.
 create function public.save_payroll_period_drafts(p_month date,p_rows jsonb)
-returns jsonb language plpgsql security definer set search_path='' as $
+returns jsonb language plpgsql security definer set search_path='' as $$
 declare x jsonb; j uuid; rid uuid; rev integer; result jsonb:='[]'::jsonb;
 begin
  if coalesce(staff_private.staff_role(),'') not in ('owner','manager') then raise exception using errcode='42501',message='Staff access required';end if;
@@ -133,7 +133,7 @@ begin
   end;
  end loop;
  return result;
-end $;
+end $$;
 revoke all on function public.save_payroll_period_drafts(date,jsonb) from public,anon,authenticated;
 grant execute on function public.save_payroll_period_drafts(date,jsonb) to authenticated;
 commit;
