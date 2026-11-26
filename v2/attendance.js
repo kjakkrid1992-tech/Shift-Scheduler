@@ -2,7 +2,8 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id),D=window.StaffDates,E=window.AttendanceEngine;
-let db=null,role=null,plan=null,period=null,day=null,dept=null,jobs=[],records=[],slots=[],selected=null,busy=false,dirty=false,epoch=0,manualNormal=false,bulk=new Set();
+const M=window.AttendancePeriodPage;
+let mode="month",db=null,role=null,plan=null,period=null,day=null,dept=null,jobs=[],records=[],slots=[],selected=null,busy=false,dirty=false,epoch=0,manualNormal=false,bulk=new Set();
 const names={work:'ทำงานจริง',off:'หยุด',leave:'ลา',holiday:'วันหยุด',absent:'ขาดงาน'},statusNames={draft:'ร่าง',verified:'ตรวจแล้ว',approved:'อนุมัติแล้ว'},actionNames={create:'สร้าง',edit:'แก้ไข',verify:'ตรวจสอบ',approve:'อนุมัติ',reopen:'ตีกลับ'};
 const n=(tag,value)=>{const el=document.createElement(tag);if(value!==undefined)el.textContent=value;return el};
 const hide=(id,on=true)=>$(id).hidden=on;
@@ -16,10 +17,13 @@ const jobLabel=j=>j.code+' · '+j.name;
 const times=t=>t?new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(t)):'';
 const isoDay=t=>t?D.bangkokToday(new Date(t)):null;
 function setTab(on){hide('attendanceView',!on);$('tabAttendance').classList.toggle('primary',on);$('tabAttendance').setAttribute('aria-pressed',String(on));if(on){hide('employeeView');hide('schedulerView');for(const id of ['tabStaff','tabSchedule']){$(id).classList.remove('primary');$(id).setAttribute('aria-pressed','false')}}}
-function reset(){bulk.clear();$('attBulkCount').textContent='';epoch++;db=null;role=null;plan=null;period=null;day=null;dept=null;jobs=[];records=[];slots=[];selected=null;dirty=false;busy=false;form.reset();$('attEditor').inert=false;for(const id of ['attRows','attHistoryRows','attDept'])$(id).replaceChildren();for(const id of ['attEmployee','attSnapshot','attStatus','attCalc','attTitle','attPlan'])$(id).textContent='';hide('attEditor');hide('attContent');msg();setTab(false)}
+function reset(){M.reset();bulk.clear();$('attBulkCount').textContent='';epoch++;db=null;role=null;plan=null;period=null;day=null;dept=null;jobs=[];records=[];slots=[];selected=null;dirty=false;busy=false;form.reset();$('attEditor').inert=false;for(const id of ['attRows','attHistoryRows','attDept'])$(id).replaceChildren();for(const id of ['attEmployee','attSnapshot','attStatus','attCalc','attTitle','attPlan'])$(id).textContent='';hide('attEditor');hide('attContent');msg();setTab(false)}
 function canLeave(){return !(dirty||bulk.size)||confirm('มีข้อมูลหรือการเลือกที่ยังไม่ได้บันทึก ต้องการละทิ้งหรือไม่?')}
-function leave(){if($('attendanceView').hidden)return true;if(busy||!canLeave())return false;reset();return true}
-function open(client,userRole,depts){db=client;role=userRole;$('attDept').replaceChildren();for(const d of depts)$('attDept').add(new Option(d.name,d.id));const preferred=depts.find(d=>d.active&&d.name==='หน้าร้าน');if(preferred)$('attDept').value=preferred.id;$('attDate').value=D.displayDate(D.bangkokToday());setTab(true);msg('เลือกวันที่และแผนก แล้วโหลดตารางที่ยืนยันแล้ว')}
+function leave(){if($('attendanceView').hidden)return true;if(busy||M.isBusy()||!canLeave()||!M.canLeave())return false;reset();return true}
+function open(client,userRole,depts){db=client;role=userRole;$('attDept').replaceChildren();for(const d of depts)$('attDept').add(new Option(d.name,d.id));const preferred=depts.find(d=>d.active&&d.name==='หน้าร้าน');if(preferred)$('attDept').value=preferred.id;$('attDate').value=D.displayDate(D.bangkokToday());setTab(true);M.open(client,userRole,depts);setMode('month');msg('เลือกวันที่และแผนก แล้วโหลดตารางที่ยืนยันแล้ว')}
+function setMode(next){mode=next;hide('attDailyView',next!=='day');hide('attMonthView',next!=='month');for(const [id,key] of [['attMonthMode','month'],['attDayMode','day']]){$(id).classList.toggle('primary',next===key);$(id).setAttribute('aria-pressed',String(next===key))}}
+$('attMonthMode').onclick=()=>{if(mode==='month'||busy||M.isBusy()||!canLeave())return;dirty=false;bulk.clear();selected=null;day=null;hide('attContent');hide('attEditor');setMode('month');M.invalidate()};
+$('attDayMode').onclick=()=>{if(mode==='day'||busy||M.isBusy()||!M.canLeave())return;M.invalidate();setMode('day')};
 async function run(fn){if(busy||!db)return;busy=true;const t=epoch;$('attEditor').inert=true;$('attContent').inert=true;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','tabAdvance','tabPayroll','tabLegacy','logout'])$(id).disabled=true;try{await fn(t)}catch(e){if(t===epoch)msg(explain(e),true)}finally{if(t===epoch){busy=false;$('attEditor').inert=false;$('attContent').inert=false;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','tabAdvance','tabPayroll','tabLegacy','logout'])$(id).disabled=false;bulkControls()}}}
 async function load(t,keep=null){
  const d=keep&&day?day:D.parseDate($('attDate').value),dp=keep&&dept?dept:$('attDept').value;if(keep){$('attDate').value=D.displayDate(d);$('attDept').value=dp;}if(d>D.bangkokToday())throw Error('ยังไม่สามารถบันทึกวันในอนาคต');if(!dp)throw Error('เลือกแผนก');
@@ -110,6 +114,6 @@ async function transition(t,action){const r=existing();if(!r)throw Error('ยั
  const id=selected;unwrap(await db.rpc('transition_attendance',{p_id:r.id,p_revision:r.revision,p_action:action,p_reason:reason}));if(t!==epoch)return;await load(t,id);if(t===epoch)msg('ดำเนินการ '+actionNames[action]+' สำเร็จ')}
 $('attVerify').onclick=()=>run(t=>transition(t,'verify'));$('attApprove').onclick=()=>run(t=>transition(t,'approve'));$('attReopen').onclick=()=>run(t=>transition(t,'reopen'));
 $('attHistory').onclick=()=>run(async t=>{const r=existing();if(!r)return;const rr=unwrap(await db.from('attendance_revisions').select('revision,action,reason,created_at,snapshot').eq('attendance_id',r.id).order('revision',{ascending:false}));if(t!==epoch)return;const box=$('attHistoryRows');box.replaceChildren(n('h3','ประวัติการแก้ไข'));for(const x of rr){const p=n('div');p.className='job-card';const z=x.snapshot;p.append(n('strong','Rev '+x.revision+' · '+actionNames[x.action]),n('p',D.displayDate(isoDay(x.created_at))+' '+times(x.created_at)+' · '+names[z.attendance_type]+' · '+E.duration(z.work_minutes)),n('p','ปกติ '+E.duration(z.normal_minutes)+' / OT '+E.duration(z.ot_minutes)+' · '+statusNames[z.status]));if(z.actual_start)p.append(n('p',times(z.actual_start)+'–'+times(z.actual_end)+' · พัก '+z.break_minutes+' นาที'));if(z.note)p.append(n('p','หมายเหตุ: '+z.note));if(x.reason)p.append(n('p','เหตุผล: '+x.reason));box.append(p)}});
-window.addEventListener('beforeunload',e=>{if(dirty||bulk.size){e.preventDefault();e.returnValue=''}});
-window.AttendancePage={open,reset,leave,hasUnsaved:()=>dirty||bulk.size>0,isBusy:()=>busy};
+window.addEventListener('beforeunload',e=>{if(dirty||bulk.size||M.hasUnsaved()||M.isBusy()||busy){e.preventDefault();e.returnValue=''}});
+window.AttendancePage={open,reset,leave,hasUnsaved:()=>dirty||bulk.size>0||M.hasUnsaved(),isBusy:()=>busy||M.isBusy()};
 })();

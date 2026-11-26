@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
-<title>BAAN JERGUN | Staff Management</title><link rel="stylesheet" href="./styles.css?v=20261126.17">
+<title>BAAN JERGUN | Staff Management</title><link rel="stylesheet" href="./styles.css?v=20261126.19">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
-<script defer src="./config.js"></script><script defer src="./staff-dates.js"></script><script defer src="./schedule-engine.js"></script><script defer src="./calendar-engine.js?v=20261126.13"></script><script defer src="./scheduler.js?v=20261126.13"></script><script defer src="./attendance-engine.js?v=20261126.6"></script><script defer src="./attendance.js?v=20261126.17"></script><script defer src="./advance-engine.js?v=20261126.7"></script><script defer src="./cash-advance.js?v=20261126.7"></script><script defer src="./payroll-engine.js?v=20261126.9"></script><script defer src="./payroll.js?v=20261126.17"></script><script defer src="./legacy-payroll.js?v=20261126.12"></script><script defer src="./app.js?v=20261126.17"></script></head>
-<body><header><div><strong>Shift Scheduler <span>V2</span></strong><small>BAAN JERGUN · Staff Management · 7.8 RC1</small></div><button id="logout" hidden>ออกจากระบบ</button></header>
+<script defer src="./config.js"></script><script defer src="./staff-dates.js"></script><script defer src="./schedule-engine.js"></script><script defer src="./calendar-engine.js?v=20261126.13"></script><script defer src="./scheduler.js?v=20261126.13"></script><script defer src="./attendance-engine.js?v=20261126.6"></script><script defer src="./attendance-period-engine.js?v=20261126.19"></script><script defer src="./attendance-period.js?v=20261126.19"></script><script defer src="./attendance.js?v=20261126.19"></script><script defer src="./advance-engine.js?v=20261126.7"></script><script defer src="./cash-advance.js?v=20261126.7"></script><script defer src="./payroll-engine.js?v=20261126.9"></script><script defer src="./payroll.js?v=20261126.17"></script><script defer src="./legacy-payroll.js?v=20261126.12"></script><script defer src="./app.js?v=20261126.17"></script></head>
+<body><header><div><strong>Shift Scheduler <span>V2</span></strong><small>BAAN JERGUN · Staff Management · 7.9 RC2</small></div><button id="logout" hidden>ออกจากระบบ</button></header>
 <main><div id="message" role="status" aria-live="polite"></div>
 <section id="setup" hidden><h1>เชื่อมต่อฐานข้อมูล</h1><p>ยังไม่มีการตั้งค่า Supabase หรือ SDK โหลดไม่สำเร็จ โปรดอ่านคู่มือ Phase 1 ใน GitHub แล้วตั้งค่า v2/config.js ด้วย Project URL และ Publishable key เท่านั้น</p><a href="../index.html">กลับระบบเดิม</a></section>
 <section id="login" hidden><h1>เข้าสู่ระบบ</h1><form id="loginForm"><label>อีเมล<input type="email" name="email" autocomplete="username" required></label><label>รหัสผ่าน<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">เข้าสู่ระบบ</button></form><p>สำหรับบัญชีที่ผู้ดูแลระบบสร้างให้เท่านั้น</p><a href="../index.html">กลับระบบเดิม</a></section>
@@ -31,6 +31,22 @@
 <p class="date-hint">ล็อกกะป้องกันการจัดอัตโนมัติทับ · ยืนยันแล้วแก้ไขไม่ได้ ต้องสร้างเวอร์ชันใหม่ · ชั่วโมงเป็นแผน ไม่ใช่ยอดจ่ายจริง</p></div></section>
 <section id="attendanceView" hidden>
  <div class="row"><div><h1>บันทึกเวลาทำงานจริง</h1><p>ตรวจสอบบัตรลงเวลา · เทียบตารางกะที่ยืนยันแล้ว · ยังไม่คำนวณเงินเดือน</p></div></div>
+ <div class="row att-mode"><button id="attMonthMode" type="button" class="primary" aria-pressed="true">ลงเวลาทั้งรอบ</button><button id="attDayMode" type="button" aria-pressed="false">รายวัน / ประวัติแก้ไข</button></div>
+ <div id="attMonthView">
+ <div class="fields"><label>รอบเงินเดือน (เดือนที่สิ้นรอบ MM/YYYY)<input id="amMonth" placeholder="12/2026" maxlength="7"></label><label>แผนก<select id="amDept"></select></label></div>
+ <div class="row"><button id="amLoad" class="primary" type="button">โหลดทั้งรอบ</button><label>พนักงาน<select id="amEmployee" disabled></select></label></div>
+ <div id="amMessage" role="status" aria-live="polite"></div>
+ <div id="amContent" hidden>
+ <h2 id="amTitle"></h2><p id="amSummary"></p>
+ <div class="bulk-panel"><h3>กรอกหลายวันพร้อมกัน</h3><p class="date-hint">ตรวจบัตรลงเวลาจริงก่อนใช้กะตามแผน · เลือกวันที่ด้วยช่องติ๊ก แล้วใช้เวลา/สถานะเดียวกันได้ · ไม่สรุปวันหยุดจากกะว่างเอง</p>
+ <div class="row"><button id="amCopyPlan" type="button">เติมกะตรงตามแผนที่จบแล้ว (ช่องว่าง)</button><button id="amSelectEditable" type="button">เลือกวันใหม่/ร่างทั้งหมด</button><button id="amSelectVerified" type="button">เลือกวันที่ตรวจแล้ว</button><button id="amClear" type="button">ล้างการเลือก</button></div>
+ <div class="row"><label>กรอกวันที่เลือก<select id="amPreset"><option value="morning">เช้า 06:30–15:30 พัก 60 นาที</option><option value="afternoon">บ่าย 12:00–21:00 พัก 60 นาที</option><option value="double">เต็มวัน 06:30–21:00 พัก 120 นาที</option><option value="off">หยุดจริง</option><option value="leave">ลา</option><option value="holiday">วันหยุด</option><option value="absent">ขาดงาน</option></select></label><button id="amApply" type="button">ใช้กับวันที่เลือก</button></div>
+ <p class="date-hint">เวลาและพักเป็นค่าช่วยกรอก ตรวจและแก้ไขได้ทุกแถว · เวลาปกติที่เสนอไม่เกิน 480 นาที · หมายเหตุจำเป็นเมื่อไม่มีแผนแต่ทำงาน หยุดต่างจากแผน ลา ขาด หรือวันหยุด</p></div>
+ <div class="tablewrap am-scroll"><table class="am-table"><thead><tr><th>เลือก</th><th>วันที่ / แผน</th><th>สถานะวัน</th><th>เข้า</th><th>ออก</th><th>ข้ามวัน</th><th>พัก (นาที)</th><th>ปกติ (นาที)</th><th>OT (นาที)</th><th>หมายเหตุ</th><th>สถานะบันทึก</th></tr></thead><tbody id="amRows"></tbody></table></div>
+ <div class="am-footer"><p id="amSelected"></p><div class="schedule-actions"><button id="amSave" type="button">บันทึกร่างที่เลือก</button><button id="amVerify" class="primary" type="button">บันทึก / ตรวจสอบที่เลือก</button><button id="amApprove" type="button">อนุมัติที่เลือก (Owner)</button></div></div>
+ <p class="date-hint">บันทึกทีละรายการผ่านระบบตรวจสอบเดิม หากรายการใดผิดพลาด ระบบจะแสดงวันและเหตุผล โดยเก็บรายการที่สำเร็จแล้วไว้ · ใช้โหมดรายวันสำหรับตีกลับและดูประวัติ</p>
+ </div></div>
+ <div id="attDailyView" hidden>
  <div class="fields"><label>วันที่ทำงาน (DD/MM/YYYY ค.ศ.)<input id="attDate" placeholder="26/11/2026" maxlength="10"></label><label>แผนก<select id="attDept"></select></label></div>
  <div class="row"><button id="attLoad" class="primary">โหลดข้อมูลประจำวัน</button><label>แสดง<select id="attFilter"><option value="all">ทุกคน</option><option value="pending">ยังไม่บันทึก</option><option value="draft">ร่าง</option><option value="verified">ตรวจแล้ว</option><option value="approved">อนุมัติแล้ว</option></select></label></div>
  <div id="attMessage" role="status" aria-live="polite"></div>
@@ -43,6 +59,7 @@
  <label>หมายเหตุ / เหตุผลต่างจากแผน<textarea name="note" maxlength="1000" rows="3"></textarea></label>
  <div class="schedule-actions"><button id="attSave" class="primary" type="submit">บันทึกร่าง</button><button id="attSaveVerify" type="button">บันทึกและยืนยันตรวจสอบ</button></div></form>
  <div class="schedule-actions"><button id="attVerify">ยืนยันตรวจสอบ</button><button id="attApprove" class="primary">อนุมัติ (เจ้าของ)</button><button id="attReopen">ตีกลับเพื่อแก้ไข</button><button id="attHistory">ดูประวัติการแก้ไข</button></div><div id="attHistoryRows"></div>
+ </div>
  </div>
  <p class="date-hint">หนึ่งรายการต่อการจ้าง/วัน · วันลายังไม่กำหนดสิทธิ์รับค่าจ้าง · เวลาปกติ/OT เป็นนาทีที่รับรอง ไม่ใช่ยอดเงิน</p>
 </section>
