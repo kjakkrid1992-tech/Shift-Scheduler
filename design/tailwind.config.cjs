@@ -1,1 +1,0 @@
-module.exports={content:['./v2/index.html','./v2/material3.js','./v2/attendance-period.js','./v2/material-states.html'],prefix:'tw-',corePlugins:{preflight:false},theme:{extend:{colors:{primary:'#245A74','on-primary':'#FFFFFF',surface:'#FBFCFE','surface-container':'#EEF3F7','on-surface':'#17272F',muted:'#4B5F6B',error:'#A12525'},borderRadius:{m3:'24px'}}}};

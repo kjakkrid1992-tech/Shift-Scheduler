@@ -1,7 +1,7 @@
 name: V2 isolated regression
 on:
   push:
-    branches: [development-v2, ux-material3]
+    branches: [development-v2]
   workflow_dispatch:
 permissions:
   contents: read
@@ -53,19 +53,3 @@ jobs:
             echo "::endgroup::"
           done
           test "$failures" -eq 0
-
-  material-build:
-    if: github.ref_name == 'ux-material3'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compile pinned Tailwind utilities
-        run: npx --yes tailwindcss@3.4.17 -c design/tailwind.config.cjs -i design/tailwind.input.css -o v2/tailwind.utilities.css --minify
-      - name: Install pinned browser test dependency
-        run: |
-          npm install --no-save --no-package-lock playwright@1.51.1
-          npx playwright install --with-deps chromium
-      - name: Browser smoke using generated Tailwind CSS
-        run: node tests/m3-browser.cjs
-      - name: Demo all-menu smoke (offline fixture)
-        run: node tests/demo-browser.cjs
