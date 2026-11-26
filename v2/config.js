@@ -1,3 +1,2 @@
-// Copy to config.js locally or create config.js with the same structure.
-// Use the public sb_publishable_ key ONLY. Never use secret or service_role keys.
-window.STAFF_CONFIG = { url: "", publishableKey: "" };
+// Browser-safe Supabase publishable key. Never put a secret or service_role key here.
+window.STAFF_CONFIG = { url: "https://dujkdkmwiktddpqawcnj.supabase.co", publishableKey: "sb_publishable_8Mz5YS5Mcn2mKxCG5VIX2Q_sqYFoi6I" };
