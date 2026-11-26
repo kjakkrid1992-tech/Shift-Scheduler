@@ -1,0 +1,55 @@
+name: V2 isolated regression
+on:
+  push:
+    branches: [development-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic-ci-password
+          POSTGRES_DB: staff_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d staff_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: staff_ci
+      PGUSER: postgres
+      PGPASSWORD: synthetic-ci-password
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript unit suites and syntax
+        run: |
+          set -e
+          node --test tests/*.test.js
+          for f in v2/*.js; do node --check "$f"; done
+      - name: Bootstrap disposable PostgreSQL
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f tests/ci_bootstrap.sql
+          for f in supabase/migrations/*.sql; do echo "::group::$f"; psql -X -v ON_ERROR_STOP=1 -f "$f"; echo "::endgroup::"; done
+          psql -X -v ON_ERROR_STOP=1 -f tests/ci_seed.sql
+      - name: SQL regression suites
+        run: |
+          failures=0
+          for f in supabase/tests/*.sql; do
+            echo "::group::$f"
+            if psql -X -v ON_ERROR_STOP=1 -f "$f"; then
+              echo "PASS $f"
+            else
+              echo "::error::FAIL $f"
+              failures=$((failures+1))
+            fi
+            echo "::endgroup::"
+          done
+          test "$failures" -eq 0
