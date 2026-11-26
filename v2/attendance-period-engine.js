@@ -3,7 +3,7 @@
 const E=typeof module==='object'&&module.exports?require('./attendance-engine.js'):root.AttendanceEngine;
 const S=typeof module==='object'&&module.exports?require('./schedule-engine.js'):root.ShiftEngine;
 function periodMonth(day){const [y,m,d]=day.split('-').map(Number);return new Date(Date.UTC(y,m-1+(d>=26?1:0),1)).toISOString().slice(0,7)}
-function monthInput(raw){if(/^\d{4}-\d{2}$/.test(String(raw||''))){S.period(raw);return raw}const m=/^(\d{2})\/(\d{4})$/.exec(String(raw||'').trim());if(!m)throw Error('กรอกรอบเดือน MM/YYYY (ค.ศ.)');const iso=m[2]+'-'+m[1];S.period(iso);return iso}
+function monthInput(raw){const m=/^(\d{2})\/(\d{4})$/.exec(String(raw||'').trim());if(!m)throw Error('กรอกรอบเดือน MM/YYYY (ค.ศ.)');const iso=m[2]+'-'+m[1];S.period(iso);return iso}
 function preset(key){const p={morning:['06:30','15:30',60],afternoon:['12:00','21:00',60],double:['06:30','21:00',120]}[key];if(p)return {kind:'work',start:p[0],end:p[1],overnight:false,breakM:p[2],normalM:480};if(!['off','leave','holiday','absent'].includes(key))throw Error('เลือกประเภท');return {kind:key,start:'',end:'',overnight:false,breakM:0,normalM:0}}
 function fromPlan(slots,day,now){const p=E.planDefaults(slots,day,now);return p?.completed?{kind:'work',start:p.start,end:p.end,overnight:p.overnight,breakM:p.breakM,normalM:p.normalM}:null}
 function payload(r,now=Date.now()){
@@ -15,9 +15,6 @@ function payload(r,now=Date.now()){
  return {p_employment:r.employment,p_date:r.day,p_schedule:r.schedule,p_revision:r.revision||0,p_type:r.kind,p_start:work?r.start:null,p_end:work?r.end:null,p_overnight:work&&!!r.overnight,p_break:work?Number(r.breakM):0,p_normal:work?Number(r.normalM):0,p_note:note}
 }
 function action(r,mode){if(mode==='approve'){if(r.status!=='verified'||r.dirty)throw Error('เลือกเฉพาะวันที่ตรวจแล้ว');return ['approve']}if(r.status!=='new'&&r.status!=='draft')throw Error('วันที่อนุมัติ/ตรวจแล้วต้องตีกลับก่อน');if(mode==='save')return r.status==='new'||r.dirty?['save']:[];if(mode==='verify')return r.status==='new'||r.dirty?['save','verify']:['verify'];throw Error('Invalid action')}
-function presetKey(r){if(!r.kind)return '';if(r.kind!=='work')return r.kind;for(const k of ['morning','afternoon','double']){const p=preset(k);if(r.start===p.start&&r.end===p.end&&!r.overnight&&Number(r.breakM)===p.breakM&&Number(r.normalM)===p.normalM)return k}return 'custom'}
-function requiresNote(r){return r.kind==='work'?!r.planCount:!!r.kind&&(!!r.planCount||r.kind!=='off')}
-function readyRows(rows,mode,today){return rows.filter(r=>r.day<=today&&(mode==='approve'?r.status==='verified'&&!r.dirty:mode==='save'?['new','draft'].includes(r.status)&&r.dirty:['new','draft'].includes(r.status)&&(r.dirty||r.status==='draft')))}
-const api={periodMonth,monthInput,preset,fromPlan,payload,action,presetKey,requiresNote,readyRows};
+const api={periodMonth,monthInput,preset,fromPlan,payload,action};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.AttendancePeriodEngine=Object.freeze(api);
 })(globalThis);
