@@ -1,0 +1,23 @@
+
+const assert=require('node:assert/strict'),E=require('../v2/schedule-engine.js');
+assert.deepEqual(E.period('2026-12'),{start:'2026-11-26',end:'2026-12-25'});
+assert.deepEqual(E.period('2027-01'),{start:'2026-12-26',end:'2027-01-25'});
+assert.equal(E.daysIn(E.period('2024-03')).length,29);
+const jobs=['a','b','c'].map(id=>({id,employee_id:id,code:id,start_date:'2026-11-26',end_date:null,employment_type:'daily',compensation_history:[{effective_from:'2026-11-26',base_rate:350}]}));
+const days=E.daysIn(E.period('2026-12'));
+const rows=days.flatMap(d=>[0,1].map(i=>({id:d+'-'+i,work_date:d,planned_start:d+(i?'T05:00:00Z':'T00:00:00Z'),planned_end:d+(i?'T14:00:00Z':'T08:00:00Z'),planned_minutes:480,is_extra:false,is_locked:false,employment_id:null})));
+rows[0].is_locked=true;rows[0].employment_id='a';
+const prefs={b:{off_days:[],leave_dates:['2026-11-26']}};
+const result=E.autoSchedule(rows,jobs,prefs,'3',['a','b','c']);
+assert.equal(result.rows[0].employment_id,'a');
+assert.notEqual(result.rows[1].employment_id,'b');
+assert.equal(E.warnings(result.rows,jobs,prefs).overlap.length,0);
+assert.equal(E.warnings(result.rows,jobs,prefs).rest.length,0);
+assert.equal(E.warnings(result.rows,jobs,prefs).fatigue.length,0);
+assert.equal(rows[1].employment_id,null);
+const balance=E.autoSchedule(rows,jobs,{},'balance',['a','b','c']);
+assert.equal(balance.metric,'estimated-pay');
+assert.equal(E.autoSchedule(rows,[{...jobs[0],compensation_history:[]},...jobs.slice(1)],{},'balance',['a','b','c']).metric,'minutes');
+assert.throws(()=>E.autoSchedule(rows,jobs,{},'2',['a']));
+assert.equal(E.eligible({...jobs[0],end_date:'2026-11-27'},'2026-11-28'),false);
+console.log('PASS: period, eligibility, locked shift, leave, overlap, rest, fatigue, rotation, balance fallback');
