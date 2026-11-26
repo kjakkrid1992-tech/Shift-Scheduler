@@ -1,8 +1,8 @@
 
 (function(){
 'use strict';
-const $=id=>document.getElementById(id), E=window.ShiftEngine, D=window.StaffDates;
-let db=null,jobs=[],depts=[],s=null,rows=[],prefs={},versions=[],dirty=false,busy=false,token=0,range=null,dept=null,chosen=new Set();
+const $=id=>document.getElementById(id), E=window.ShiftEngine, D=window.StaffDates,C=window.CalendarEngine;
+let db=null,jobs=[],depts=[],s=null,rows=[],prefs={},versions=[],dirty=false,busy=false,token=0,range=null,dept=null,chosen=new Set(),viewMode='calendar',selectedDay=null;
 const node=(tag,value)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;return e};
 const hide=(id,value=true)=>$(id).hidden=value;
 const unwrap=r=>{if(r.error)throw r.error;return r.data};
@@ -15,7 +15,7 @@ const mark=()=>{dirty=true;$('scheduleState').textContent='ร่าง · ย�
 function leaveOK(){return !dirty||confirm('มีตารางที่ยังไม่ได้บันทึก ต้องการละทิ้งการแก้ไขหรือไม่?')}
 function setTab(staff){hide('employeeView',!staff);hide('schedulerView',staff);for(const [id,on] of [['tabStaff',staff],['tabSchedule',!staff]]){$(id).classList.toggle('primary',on);$(id).setAttribute('aria-pressed',String(on))}}
 function staffTab(){if(busy||!leaveOK())return false;dirty=false;setTab(true);s=null;rows=[];hide('scheduleContent');notify();return true}
-function reset(){$('scheduleContent').inert=false;token++;db=null;jobs=[];depts=[];s=null;rows=[];prefs={};versions=[];dirty=false;busy=false;range=null;dept=null;chosen.clear();for(const id of ['scheduleRows','schedulePrefs','scheduleTotals','scheduleWarnings','scheduleVersions','scheduleFocus','scheduleDept'])$(id).replaceChildren();$('scheduleTitle').textContent='';$('scheduleState').textContent='';hide('scheduleContent');notify();setTab(true)}
+function reset(){viewMode='calendar';selectedDay=null;for(const id of ['calendarGrid','calendarLegend'])$(id).replaceChildren();$('scheduleDayTitle').textContent='';hide('scheduleDayHeading');$('scheduleContent').inert=false;token++;db=null;jobs=[];depts=[];s=null;rows=[];prefs={};versions=[];dirty=false;busy=false;range=null;dept=null;chosen.clear();for(const id of ['scheduleRows','schedulePrefs','scheduleTotals','scheduleWarnings','scheduleVersions','scheduleFocus','scheduleDept'])$(id).replaceChildren();$('scheduleTitle').textContent='';$('scheduleState').textContent='';hide('scheduleContent');notify();setTab(true)}
 function getMonth(){const m=/^(\d{2})\/(\d{4})$/.exec($('scheduleMonth').value.trim());if(!m)throw Error('กรอกรอบเดือน MM/YYYY เช่น 12/2026');const iso=m[2]+'-'+m[1];return {month:iso+'-01',...E.period(iso)}}
 function syncJobs(staff){jobs=staff.flatMap(e=>(e.employment_records||[]).map(j=>({...j,employee_id:e.id,code:e.employee_code,name:e.nickname||[e.first_name,e.last_name].filter(Boolean).join(' ')})))}
 async function open(client,staff,departments){
@@ -38,13 +38,13 @@ async function loadVersions(t){
 async function loadId(id,t){
  const [a,b]=await Promise.all([db.from('shift_schedules').select('id,version,revision,status,preferences,department_id,confirmed_at,updated_at').eq('id',id).single(),db.from('shift_assignments').select('*').eq('schedule_id',id).order('work_date').order('planned_start')]);if(t!==token)return;
  const ns=unwrap(a),nr=unwrap(b);if(ns.department_id!==dept)throw Error('ตารางไม่ตรงแผนก');
- s=ns;rows=nr.sort(E.sortRows);prefs=structuredClone(s.preferences||{});for(const p of Object.values(prefs))p.off_days=p.off_days.map(Number);dirty=false;chosen=new Set(scope().map(j=>j.id));$('scheduleVersions').value=id;
+ s=ns;rows=nr.sort(E.sortRows);if(selectedDay&&(selectedDay<range.start||selectedDay>range.end))selectedDay=null;prefs=structuredClone(s.preferences||{});for(const p of Object.values(prefs))p.off_days=p.off_days.map(Number);dirty=false;chosen=new Set(scope().map(j=>j.id));$('scheduleVersions').value=id;
  $('scheduleTitle').textContent=D.displayDate(range.start)+' – '+D.displayDate(range.end)+' · V'+s.version;
  $('scheduleState').textContent=s.status==='confirmed'?'ยืนยันแล้ว · อ่านอย่างเดียว':'ร่าง · บันทึกแล้ว';
  hide('scheduleContent',false);renderPrefs();renderFocus();renderRows();notify('โหลดตารางจากฐานข้อมูลแล้ว');
 }
 async function openPeriod(t,create){if(!leaveOK())return;const p=getMonth(),d=$('scheduleDept').value;if(!d)throw Error('กรุณาเลือกแผนก');
- range=p;dept=d;dirty=false;s=null;rows=[];hide('scheduleContent');await loadVersions(t);if(t!==token)return;
+ range=p;dept=d;dirty=false;s=null;rows=[];selectedDay=null;hide('scheduleContent');await loadVersions(t);if(t!==token)return;
  if(!versions.length&&!create){notify('ยังไม่มีตารางสำหรับรอบนี้ กดเปิดตาราง / สร้างร่าง');return}
  const id=versions[0]?.id||unwrap(await db.rpc('open_shift_schedule',{p_department:dept,p_month:p.month,p_revise:false}));if(t!==token)return;
  if(!versions.length)await loadVersions(t);if(t!==token)return;await loadId(id,t)
@@ -63,9 +63,28 @@ function renderPrefs(){
  }
 }
 function time(t){return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(t))}
+function setView(mode){viewMode=mode;renderRows()}
+function renderCalendar(){
+ const isCal=viewMode==='calendar';hide('scheduleCalendar',!isCal);hide('scheduleTableWrap',isCal&&!selectedDay);hide('scheduleDayHeading',!isCal||!selectedDay);
+ for(const [id,on] of [['scheduleCalendarMode',isCal],['scheduleListMode',!isCal]]){$(id).classList.toggle('primary',on);$(id).setAttribute('aria-pressed',String(on))}
+ if(selectedDay)$('scheduleDayTitle').textContent='รายละเอียดกะวันที่ '+D.displayDate(selectedDay);
+ if(!isCal||!range||!s)return;
+ const grid=$('calendarGrid'),legend=$('calendarLegend'),focus=$('scheduleFocus').value,people=new Map(jobs.map(j=>[j.id,j])),group=C.slotGroups(rows);
+ grid.replaceChildren();legend.replaceChildren();
+ for(const day of ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์']){const h=node('div',day);h.className='calendar-weekday';grid.append(h)}
+ const used=new Set(),today=D.bangkokToday();
+ for(const week of C.weeks(range))for(const d of week){
+  const cell=node('div');cell.className='calendar-day'+(!d?' calendar-blank':'')+(d===selectedDay?' calendar-selected':'')+(d===today?' calendar-today':'');grid.append(cell);if(!d)continue;
+  const open=node('button',D.displayDate(d).slice(0,5));open.type='button';open.className='calendar-date';open.setAttribute('aria-label','ดูกะวันที่ '+D.displayDate(d));open.setAttribute('aria-pressed',String(d===selectedDay));open.onclick=()=>{selectedDay=d;renderRows();$('scheduleDayHeading').scrollIntoView({block:'nearest'})};cell.append(open);
+  for(const r of group.get(d)||[]){const j=people.get(r.employment_id);const ev=node('button');ev.type='button';ev.className='calendar-event calendar-color-'+C.personColor(j?.employee_id||r.employment_id)+(focus&&r.employment_id&&r.employment_id!==focus?' calendar-dim':'');ev.setAttribute('aria-label',r.shift_name+' '+(j?.name|| (r.employment_id?'ไม่พบพนักงาน':'กะว่าง'))+' '+time(r.planned_start)+'–'+time(r.planned_end));ev.title=ev.getAttribute('aria-label');ev.append(node('strong',j?.name||(r.employment_id?'ไม่พบพนักงาน':'กะว่าง')),node('small',r.shift_name+(r.is_extra?' · เสริม':'')+(r.is_locked?' · ล็อก':'')+' '+time(r.planned_start)+'–'+time(r.planned_end)));ev.onclick=open.onclick;cell.append(ev);if(j)used.add(j.id)}
+  if(!(group.get(d)||[]).length)cell.append(node('small','ไม่มีกะในแผน'));
+ }
+ for(const j of jobs.filter(j=>used.has(j.id))){const chip=node('span',j.name);chip.className='calendar-legend-item calendar-color-'+C.personColor(j.employee_id||j.id);legend.append(chip)}const empty=node('span','กะว่าง');empty.className='calendar-legend-item calendar-color-0';legend.append(empty)
+}
+$('scheduleCalendarMode').onclick=()=>setView('calendar');$('scheduleListMode').onclick=()=>setView('list');$('scheduleDayClose').onclick=()=>{selectedDay=null;renderRows()};
 function renderRows(){
- const body=$('scheduleRows');body.replaceChildren();const focus=$('scheduleFocus').value,byId=new Map(jobs.map(j=>[j.id,j]));
- let prev='';for(const r of rows.sort(E.sortRows)){
+ renderCalendar();const body=$('scheduleRows');body.replaceChildren();const focus=$('scheduleFocus').value,byId=new Map(jobs.map(j=>[j.id,j]));
+ let prev='';for(const r of rows.sort(E.sortRows).filter(r=>viewMode==='list'||r.work_date===selectedDay)){
   const tr=node('tr');if(prev!==r.work_date)tr.classList.add('day-start');prev=r.work_date;if(focus&&r.employment_id!==focus)tr.classList.add('dimmed');
   const date=node('td',D.displayDate(r.work_date)),shift=node('td',r.shift_name+(r.is_extra?' · เสริม':''));shift.append(node('small',time(r.planned_start)+'–'+time(r.planned_end)));
   const person=node('td'),hours=node('td'),actions=node('td');const can=s.status==='draft';
@@ -73,13 +92,13 @@ function renderRows(){
    const sel=node('select');sel.setAttribute('aria-label','พนักงาน '+r.shift_name+' '+r.work_date);sel.add(new Option('— ว่าง —',''));
    for(const j of scope().filter(j=>E.eligible(j,r.work_date)))sel.add(new Option(label(j)+(E.unavailable(prefs,j.id,r.work_date)?' · หยุด/ลา':''),j.id));
    if(r.employment_id&&![...sel.options].some(o=>o.value===r.employment_id))sel.add(new Option((byId.get(r.employment_id)?label(byId.get(r.employment_id)):'ไม่พบพนักงาน')+' · ไม่ตรงช่วงจ้าง',r.employment_id));
-   sel.value=r.employment_id||'';sel.disabled=r.is_locked;sel.onchange=()=>{r.employment_id=sel.value||null;mark();renderSummary();if(focus)renderRows()};person.append(sel);
-   const inp=node('input');inp.type='number';inp.min='0';inp.max=String((Date.parse(r.planned_end)-Date.parse(r.planned_start))/3600000-r.planned_break_minutes/60);inp.step='0.25';inp.value=String(r.planned_minutes/60);inp.disabled=r.is_locked;inp.setAttribute('aria-label','ชั่วโมงตามแผน');inp.onchange=()=>{const n=Number(inp.value);if(!inp.value||!Number.isFinite(n)||n<0||n>Number(inp.max)||!Number.isInteger(n*60)){notify('ชั่วโมงไม่ถูกต้อง',true);inp.value=String(r.planned_minutes/60);return}r.planned_minutes=n*60;mark();renderSummary()};hours.append(inp);
+   sel.value=r.employment_id||'';sel.disabled=r.is_locked;sel.onchange=()=>{r.employment_id=sel.value||null;mark();renderSummary();renderCalendar();if(focus)renderRows()};person.append(sel);
+   const inp=node('input');inp.type='number';inp.min='0';inp.max=String((Date.parse(r.planned_end)-Date.parse(r.planned_start))/3600000-r.planned_break_minutes/60);inp.step='0.25';inp.value=String(r.planned_minutes/60);inp.disabled=r.is_locked;inp.setAttribute('aria-label','ชั่วโมงตามแผน');inp.onchange=()=>{const n=Number(inp.value);if(!inp.value||!Number.isFinite(n)||n<0||n>Number(inp.max)||!Number.isInteger(n*60)){notify('ชั่วโมงไม่ถูกต้อง',true);inp.value=String(r.planned_minutes/60);return}r.planned_minutes=n*60;mark();renderSummary();renderCalendar()};hours.append(inp);
    const lock=node('button',r.is_locked?'ปลดล็อก':'ล็อก');lock.onclick=()=>{r.is_locked=!r.is_locked;mark();renderRows()};actions.append(lock);
    const extra=node('button',r.is_extra?'ลบ':'เพิ่ม');extra.disabled=r.is_extra&&r.is_locked;extra.onclick=()=>{if(rows.length>=500&&!r.is_extra){notify('ตารางทดลองรองรับสูงสุด 500 กะ',true);return}if(r.is_extra){rows=rows.filter(x=>x.id!==r.id)}else{rows.push({...r,id:crypto.randomUUID(),is_extra:true,is_locked:false,employment_id:null})}mark();renderRows()};actions.append(extra)
   }else{person.textContent=r.employment_id?(byId.get(r.employment_id)?label(byId.get(r.employment_id)):'ไม่พบประวัติ'):'— ว่าง —';hours.textContent=String(r.planned_minutes/60);actions.textContent=r.is_locked?'ล็อก':''}
   tr.append(date,shift,person,hours,actions);body.append(tr)
- }renderSummary();renderControls()
+ }if(!body.children.length&&(!isNaN(Date.parse(selectedDay||''))||viewMode==='list')){const tr=node('tr'),td=node('td','ไม่มีกะในวันที่เลือก');td.colSpan=5;tr.append(td);body.append(tr)}renderSummary();renderControls()
 }
 function renderSummary(){
  const w=E.warnings(rows,jobs,prefs),box=$('scheduleWarnings');box.replaceChildren();const lines=[['กะหลักว่าง',w.empty],['กะที่ไม่ตรงวันทำงาน / วันลา / ชั่วโมงศูนย์',w.invalid.length],['กะซ้อนเวลา',w.overlap.length],['พักระหว่างกะน้อยกว่า 11 ชั่วโมง',w.rest.length],['ทำงานติดกันเกิน 6 วัน',w.fatigue.length],['กะที่ยังไม่มีเรทค่าแรง',w.missingRate.length]];

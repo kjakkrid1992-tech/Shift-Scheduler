@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),C=require('../v2/calendar-engine.js');
+let w=C.weeks({start:'2026-11-26',end:'2026-12-25'});
+assert.equal(w.length,5);assert.equal(w[0][3],'2026-11-26');assert.equal(w[4][4],'2026-12-25');assert.equal(w.flat().filter(Boolean).length,30);
+w=C.weeks({start:'2028-02-26',end:'2028-03-25'});assert.equal(w.flat().filter(Boolean).length,29);assert.ok(w.flat().includes('2028-02-29'));
+w=C.weeks({start:'2026-12-26',end:'2027-01-25'});assert.equal(w.flat().filter(Boolean).length,31);assert.equal(w.flat().filter(Boolean)[30],'2027-01-25');
+assert.throws(()=>C.weeks({start:'2026-02-30',end:'2026-03-25'}));
+assert.throws(()=>C.weeks({start:'2026-01-01',end:'2026-02-02'}));
+const a={id:'a',work_date:'2026-11-26',planned_start:'2026-11-26T06:30:00+07:00'},b={id:'b',work_date:a.work_date,planned_start:'2026-11-26T12:00:00+07:00'};
+assert.deepEqual(C.slotGroups([b,a]).get(a.work_date),[a,b]);assert.equal(C.personColor(null),0);assert.equal(C.personColor('employee'),C.personColor('employee'));assert.ok(C.personColor('employee')>=1&&C.personColor('employee')<=8);
+console.log('PASS: period calendar, leap day, year boundary, sorting and stable colors');
