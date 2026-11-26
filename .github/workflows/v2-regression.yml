@@ -1,7 +1,7 @@
 name: V2 isolated regression
 on:
   push:
-    branches: [development-v2]
+    branches: [development-v2, development-v8]
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +33,7 @@ jobs:
         run: |
           set -e
           node --test tests/*.test.js
-          for f in v2/*.js; do node --check "$f"; done
+          for f in v2/*.js v8/*.js; do node --check "$f"; done
       - name: Bootstrap disposable PostgreSQL
         run: |
           psql -X -v ON_ERROR_STOP=1 -f tests/ci_bootstrap.sql

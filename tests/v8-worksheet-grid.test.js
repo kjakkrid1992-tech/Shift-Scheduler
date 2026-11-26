@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const G=require('../v8/worksheet-grid.js');
+const base=()=>({kind:'work',start:'',end:'',overnight:false,breakM:'',normalM:'',note:'',manualNormal:false,status:'new'});
+const rows=[base(),base(),{...base(),status:'approved'}],editable=r=>r.status==='new';
+let staged=G.stagePaste(rows,0,'start','6:30\t15:30\t0\t60\r\n06:30\t21:00\t0\t120',editable);
+assert.equal(staged[0].patch.start,'06:30');assert.equal(staged[0].patch.normalM,480);assert.equal(staged[1].patch.normalM,480);assert.equal(rows[0].start,'');
+assert.throws(()=>G.stagePaste(rows,1,'start','06:30\n07:00',editable),/ล็อก/);
+assert.throws(()=>G.stagePaste(rows,0,'start','25:00\n07:00',editable));
+assert.throws(()=>G.stagePaste(rows,0,'note','one\ttwo',editable));
+assert.throws(()=>G.stagePaste(rows,0,'kind','หยุด\t06:30',editable));
+assert.equal(G.stagePaste(rows,0,'kind','ลา',editable)[0].patch.kind,'leave');
+assert.equal(G.stagePaste(rows,0,'normalM','300',editable)[0].patch.manualNormal,true);
+assert.equal(G.stagePaste([{...base(),manualNormal:true,normalM:240}],0,'start','06:30\t15:30\t0\t60',editable)[0].patch.normalM,undefined);
+console.log('PASS V8 worksheet paste validation and locked rows');
