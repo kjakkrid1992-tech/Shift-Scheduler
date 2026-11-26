@@ -9,3 +9,5 @@ html{scroll-padding-top:90px}.date-hint{display:block;font-size:11px;font-weight
 .tabs{flex-wrap:wrap}#attendanceView textarea{display:block;width:100%;padding:10px;margin-top:5px;border:1px solid #c7d0da;border-radius:8px;font:inherit;resize:vertical}#attEditor{margin-top:24px;border-top:1px solid #dce3ec;padding-top:20px}.inline-check{display:flex;align-items:center;gap:8px;margin:10px 0}.inline-check input{width:auto;margin:0}#attSuggest{margin-bottom:8px}#attRows td:nth-child(2){min-width:160px}#attHistoryRows{margin-top:12px}@media(max-width:600px){#attendanceView .stats{grid-template-columns:repeat(2,1fr)}}
 
 #attRows td:last-child button{margin:3px 5px 3px 0}#attRows td:last-child{min-width:180px}#attEditorMessage{margin:10px 0}#attCopyPlan{margin:0 6px 8px 0}
+
+#advEditor{margin-top:20px;padding-top:18px;border-top:1px solid #dce3ec}#advEditorMessage{margin:10px 0}#advRows td:nth-child(5){min-width:130px;overflow-wrap:anywhere}#advRows td:nth-child(3){white-space:nowrap}#advPayForm{padding:14px;border:1px solid #dce3ec;border-radius:8px}#advHistoryRows{margin-top:12px}

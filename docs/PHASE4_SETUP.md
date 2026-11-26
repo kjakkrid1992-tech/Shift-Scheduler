@@ -1,0 +1,13 @@
+
+# Phase 4 — Cash Advance pilot
+Apply migration 20261126000600_cash_advance.sql once after Phase 3. Adds cash_advances and cash_advance_revisions (16 business tables). Run supabase/tests/cash_advance.sql (rollback), then download development-v2 and open v2/ as before.
+## Workflow
+- Menu เงินเบิก: defaults to current 26–25 pay period, all departments. Add a draft with request date, employee, amount (THB with 2 decimals), note. No confirmed shift schedule required. Owner/Manager can create/edit/cancel drafts; changing employee/date requires cancel and recreate.
+- Owner approves draft. Approved amount is frozen. Owner or Manager records actual payment after approval (cash or transfer, transfer reference required). This records a payment already made outside the system, never moves money. Actual date may be historical, not future, not before request and within employment.
+- Actual payment date determines deduction candidate period (26–25); if different from request period, record moves to payment period. Only paid status is a candidate; draft/approved/cancelled/voided excluded. No payroll calculation yet.
+- Owner can cancel approved but unpaid records. Owner can void a paid record only if it was recorded erroneously and no actual disbursement occurred; requires reason, retains history. Not a repayment mechanism. Paid amount is immutable. Every change has revision snapshot and actor. Stale revision rejected. Stable create UUID protects normal retry, not intentional repeat entries.
+## Pilot boundaries / decisions
+- Amount range 0.01–1,000,000 THB (integer satang, arbitrary technical limit, not an approval policy). Manager may record paid after Owner approves; no per-employee advance limit/approval threshold, no automatic money transfer. No partial payment, repayment ledger, installment deduction, cross-period carryover, salary limit, or deductions authorization workflow. Do not use with actual funds yet.
+- Payroll Phase 5 must enforce one deduction per paid record, closed-period locks (including void), handle remaining balances, and obtain applicable employee consent / legal deduction rules. Do not assume all paid advances may lawfully be deducted automatically. Actual paid date may predate system approval for retrospective recording; audit timestamps retain sequence.
+- API scope: same staff roles as Foundation, all departments visible; no direct write grants. List limit 999 rows per selected scope; employment roster uses existing pilot API pagination defaults, not large organizations.
+- Test owner and manager separately, draft edit, rejected manager approval, cross-period payment, duplicate retry, void/cancel reason, history, reload. Browser and live DB regression pending. Calendar backlog #5 unchanged.
