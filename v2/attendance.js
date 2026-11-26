@@ -2,12 +2,13 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id),D=window.StaffDates,E=window.AttendanceEngine;
-let db=null,role=null,plan=null,period=null,day=null,dept=null,jobs=[],records=[],slots=[],selected=null,busy=false,dirty=false,epoch=0;
+let db=null,role=null,plan=null,period=null,day=null,dept=null,jobs=[],records=[],slots=[],selected=null,busy=false,dirty=false,epoch=0,manualNormal=false;
 const names={work:'ทำงานจริง',off:'หยุด',leave:'ลา',holiday:'วันหยุด',absent:'ขาดงาน'},statusNames={draft:'ร่าง',verified:'ตรวจแล้ว',approved:'อนุมัติแล้ว'},actionNames={create:'สร้าง',edit:'แก้ไข',verify:'ตรวจสอบ',approve:'อนุมัติ',reopen:'ตีกลับ'};
 const n=(tag,value)=>{const el=document.createElement(tag);if(value!==undefined)el.textContent=value;return el};
 const hide=(id,on=true)=>$(id).hidden=on;
 const unwrap=r=>{if(r.error)throw r.error;return r.data};
-const msg=(t='',bad=false)=>{$('attMessage').textContent=t;$('attMessage').className=t?(bad?'notice':'rate-summary'):''};
+const msg=(t='',bad=false)=>{$('attMessage').textContent=t;$('attMessage').className=t?(bad?'notice':'rate-summary'):'';const local=$('attEditorMessage');local.hidden=!bad||$('attEditor').hidden;local.textContent=local.hidden?'':t;local.className='notice'};
+function explain(e){const m=e.message||'เกิดข้อผิดพลาด';if(m.includes('Invalid actual work interval'))return 'ยังไม่ถึงเวลาออกงาน หรือเวลาเข้า–ออกไม่ถูกต้อง กรุณาตรวจสอบเวลาแล้วบันทึกหลังจบกะ';if(m.includes('STALE_ATTENDANCE')||m.includes('STALE_PLAN'))return 'ข้อมูลถูกเปลี่ยนจากอีกเครื่อง กรุณาโหลดข้อมูลใหม่';if(m.includes('Unplanned work requires a note')||m.includes('Non-work exception requires a note'))return 'กรุณาระบุหมายเหตุสำหรับรายการที่ต่างจากแผน';return m}
 const form=$('attForm'),f=form.elements;
 const existing=()=>records.find(r=>r.employment_id===selected);
 const planFor=id=>slots.filter(r=>r.employment_id===id);
@@ -19,7 +20,7 @@ function reset(){epoch++;db=null;role=null;plan=null;period=null;day=null;dept=n
 function canLeave(){return !dirty||confirm('มีข้อมูลเวลาจริงที่ยังไม่ได้บันทึก ต้องการละทิ้งหรือไม่?')}
 function leave(){if($('attendanceView').hidden)return true;if(busy||!canLeave())return false;reset();return true}
 function open(client,userRole,depts){db=client;role=userRole;$('attDept').replaceChildren();for(const d of depts)$('attDept').add(new Option(d.name,d.id));const preferred=depts.find(d=>d.active&&d.name==='หน้าร้าน');if(preferred)$('attDept').value=preferred.id;$('attDate').value=D.displayDate(D.bangkokToday());setTab(true);msg('เลือกวันที่และแผนก แล้วโหลดตารางที่ยืนยันแล้ว')}
-async function run(fn){if(busy||!db)return;busy=true;const t=epoch;$('attEditor').inert=true;$('attContent').inert=true;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','logout'])$(id).disabled=true;try{await fn(t)}catch(e){if(t===epoch)msg(e.message||'เกิดข้อผิดพลาด',true)}finally{if(t===epoch){busy=false;$('attEditor').inert=false;$('attContent').inert=false;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','logout'])$(id).disabled=false}}}
+async function run(fn){if(busy||!db)return;busy=true;const t=epoch;$('attEditor').inert=true;$('attContent').inert=true;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','logout'])$(id).disabled=true;try{await fn(t)}catch(e){if(t===epoch)msg(explain(e),true)}finally{if(t===epoch){busy=false;$('attEditor').inert=false;$('attContent').inert=false;for(const id of ['attLoad','attDate','attDept','tabStaff','tabSchedule','tabAttendance','logout'])$(id).disabled=false}}}
 async function load(t,keep=null){
  const d=keep&&day?day:D.parseDate($('attDate').value),dp=keep&&dept?dept:$('attDept').value;if(keep){$('attDate').value=D.displayDate(d);$('attDept').value=dp;}if(d>D.bangkokToday())throw Error('ยังไม่สามารถบันทึกวันในอนาคต');if(!dp)throw Error('เลือกแผนก');
  // Do not leave stale rows editable if load fails.
@@ -44,24 +45,53 @@ function render(){
  const body=$('attRows');body.replaceChildren();const filter=$('attFilter').value;
  $('attPlanned').textContent=jobs.filter(j=>planFor(j.id).length).length;$('attPending').textContent=jobs.filter(j=>!records.some(r=>r.employment_id===j.id)).length;$('attVerified').textContent=records.filter(r=>r.status==='verified').length;$('attApproved').textContent=records.filter(r=>r.status==='approved').length;
  for(const j of jobs){const r=records.find(x=>x.employment_id===j.id);if(filter!=='all'&&(filter==='pending'?!!r:r?.status!==filter))continue;
- const tr=n('tr'),p=n('td',jobLabel(j)),pl=n('td',planText(planFor(j.id))),actual=n('td',r?(r.attendance_type==='work'?E.duration(r.work_minutes):names[r.attendance_type]):'—'),st=n('td',r?statusNames[r.status]:'ยังไม่บันทึก'),td=n('td'),btn=n('button',r?'ดู / แก้ไข':'บันทึก');
- if(r&&r.schedule_id!==plan.id)st.append(n('small','อ้างอิงแผนเวอร์ชันก่อน'));btn.onclick=()=>{if(!busy&&canLeave())edit(j.id)};td.append(btn);tr.append(p,pl,actual,st,td);body.append(tr)
+ const tr=n('tr'),p=n('td',jobLabel(j)),pl=n('td',planText(planFor(j.id))),actual=n('td',r?(r.attendance_type==='work'?E.duration(r.work_minutes):names[r.attendance_type]):'—'),st=n('td',r?statusNames[r.status]:'ยังไม่บันทึก'),td=n('td'),btn=n('button',r?'ดู / แก้ไข':'แก้เวลา / สถานะ');
+ if(r&&r.schedule_id!==plan.id)st.append(n('small','อ้างอิงแผนเวอร์ชันก่อน'));btn.onclick=()=>{if(!busy&&canLeave())edit(j.id)};if(!r){const defaults=E.planDefaults(planFor(j.id),day);if(defaults){const quick=n('button','ตรงตามกะ');quick.className='primary';quick.disabled=!defaults.completed;if(!defaults.completed){quick.title='ใช้ได้หลังจบกะ';td.append(n('small','ยังไม่ถึงเวลาออกตามกะ'))}quick.onclick=()=>run(t=>quickSave(t,j.id));td.append(quick)}else if(!planFor(j.id).length){const off=n('button','หยุดจริง');off.onclick=()=>run(t=>quickOff(t,j.id));td.append(off)}}td.append(btn);tr.append(p,pl,actual,st,td);body.append(tr)
  }if(!body.children.length){const tr=n('tr'),td=n('td','ไม่พบรายการ');td.colSpan=5;tr.append(td);body.append(tr)}
 }
-function edit(id){selected=id;dirty=false;const j=jobs.find(x=>x.id===id),r=existing();form.reset();$('attHistoryRows').replaceChildren();$('attEmployee').textContent=jobLabel(j);$('attSnapshot').textContent='แผนที่ใช้อ้างอิง: '+planText(r?r.planned_snapshot:planFor(id))+(r&&r.schedule_id!==plan.id?' · แผนเดิม (ไม่เขียนทับ)':'');$('attStatus').textContent=r?statusNames[r.status]+' · Revision '+r.revision:'ยังไม่บันทึก · กรุณาตรวจบัตรลงเวลา';
+function edit(id){selected=id;dirty=false;manualNormal=false;msg();const j=jobs.find(x=>x.id===id),r=existing();form.reset();$('attHistoryRows').replaceChildren();$('attEmployee').textContent=jobLabel(j);$('attSnapshot').textContent='แผนที่ใช้อ้างอิง: '+planText(r?r.planned_snapshot:planFor(id))+(r&&r.schedule_id!==plan.id?' · แผนเดิม (ไม่เขียนทับ)':'');$('attStatus').textContent=r?statusNames[r.status]+' · Revision '+r.revision:'ยังไม่บันทึก · กรุณาตรวจบัตรลงเวลา';
  f.kind.value=r?.attendance_type||'work';f.start.value=times(r?.actual_start);f.end.value=times(r?.actual_end);f.overnight.checked=!!r?.actual_end&&isoDay(r.actual_end)!==r.work_date;f.break.value=String(r?.break_minutes||0);f.normal.value=String(r?.normal_minutes||0);f.note.value=r?.note||'';
- const can=!r||r.status==='draft';for(const el of Array.from(form.elements))el.disabled=!can;hide('attSave',!can);hide('attVerify',r?.status!=='draft');hide('attApprove',!(r?.status==='verified'&&role==='owner'));hide('attReopen',!r||r.status==='draft'||(r.status==='approved'&&role!=='owner'));hide('attHistory',!r);hide('attEditor',false);calc();$('attEditor').scrollIntoView({block:'start'})
+ const defaults=E.planDefaults(r?r.planned_snapshot:planFor(id),day);
+ $('attPrefillHint').textContent='';
+ if(!r&&defaults){fillPlan(defaults);$('attPrefillHint').textContent='ใส่เวลาจากกะให้แล้ว ตรวจสอบกับบัตรลงเวลาก่อนบันทึก'}
+ else if(!r&&!planFor(id).length){f.kind.value='off';$('attPrefillHint').textContent='ไม่มีแผนทำงาน — ตรวจสอบว่าเป็นวันหยุดจริง หรือเปลี่ยนประเภทเป็นทำงาน/ลา'}
+ else if(!r){$('attPrefillHint').textContent='มีกะหลายช่วงหรือชั่วโมงแผนต่างจากเวลา กรุณากรอกเวลาจริงและพักรวม ไม่คัดลอกโดยอัตโนมัติ'}
+ if(r)manualNormal=true;
+ const can=!r||r.status==='draft';for(const el of Array.from(form.elements))el.disabled=!can;hide('attSave',!can);hide('attSaveVerify',!can);hide('attCopyPlan',!defaults||!can);hide('attVerify',r?.status!=='draft');hide('attApprove',!(r?.status==='verified'&&role==='owner'));hide('attReopen',!r||r.status==='draft'||(r.status==='approved'&&role!=='owner'));hide('attHistory',!r);hide('attEditor',false);calc();$('attEditor').scrollIntoView({block:'start'})
 }
 function numeric(field){if(field.value.trim()==='')throw Error('กรอกจำนวนนาทีให้ครบ');return Number(field.value)}
-function calc(){const work=f.kind.value==='work';hide('attTimes',!work);if(!work){$('attCalc').textContent='ไม่มีเวลาทำงานจริง';return}try{const c=E.calculate(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break),numeric(f.normal));$('attCalc').textContent='สุทธิ '+E.duration(c.work)+' · ปกติ '+E.duration(c.normal)+' · OT '+E.duration(c.ot)}catch(e){$('attCalc').textContent=e.message}}
-form.addEventListener('input',()=>{dirty=true;calc()});
-$('attSuggest').onclick=()=>{try{f.normal.value=String(Math.min(480,E.netMinutes(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break))));dirty=true;calc()}catch(e){msg(e.message,true)}};
+function fillPlan(p){f.kind.value='work';f.start.value=p.start;f.end.value=p.end;f.overnight.checked=p.overnight;f.break.value=String(p.breakM);f.normal.value=String(p.normalM);manualNormal=false}
+function suggestNormal(){try{f.normal.value=String(Math.min(480,E.netMinutes(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break))))}catch{}}
+function calc(){const work=f.kind.value==='work';hide('attTimes',!work);if(!work){$('attCalc').textContent='ไม่มีเวลาทำงานจริง';return}try{const c=E.calculate(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break),numeric(f.normal));$('attCalc').textContent='สุทธิ '+E.duration(c.work)+' · ปกติ '+E.duration(c.normal)+' · OT '+E.duration(c.ot)+(E.completed(day,f.end.value.trim(),f.overnight.checked)?'':' · ยังไม่ถึงเวลาออกงาน จึงยังบันทึกไม่ได้')}catch(e){$('attCalc').textContent=e.message}}
+form.addEventListener('input',e=>{dirty=true;if(e.target===f.normal)manualNormal=true;if(!manualNormal&&[f.start,f.end,f.break,f.overnight,f.kind].includes(e.target)&&f.kind.value==='work')suggestNormal();calc()});
+$('attCopyPlan').onclick=()=>{const r=existing(),p=E.planDefaults(r?r.planned_snapshot:planFor(selected),day);if(p){fillPlan(p);dirty=true;calc()}};
+$('attSuggest').onclick=()=>{try{f.normal.value=String(Math.min(480,E.netMinutes(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break))));manualNormal=false;dirty=true;calc()}catch(e){msg(e.message,true)}};
 $('attLoad').onclick=()=>run(async t=>{if(canLeave())await load(t)});
 $('attFilter').onchange=render;
 for(const id of ['attDate','attDept'])$(id).addEventListener('change',()=>{if(!day)return;if(!canLeave()){$('attDate').value=D.displayDate(day);$('attDept').value=dept;return}dirty=false;selected=null;day=null;hide('attContent');hide('attEditor');msg('กดโหลดข้อมูลประจำวันเพื่อเปิดวันที่เลือก')});
 $('attClose').onclick=()=>{if(canLeave()){dirty=false;selected=null;hide('attEditor')}};
-form.onsubmit=e=>{e.preventDefault();run(async t=>{if(!selected||!plan)throw Error('โหลดข้อมูลก่อน');const r=existing(),work=f.kind.value==='work',id=selected;if(work)E.calculate(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break),numeric(f.normal));
- unwrap(await db.rpc('save_attendance',{p_employment:id,p_date:day,p_schedule:r?.schedule_id||plan.id,p_revision:r?.revision||0,p_type:f.kind.value,p_start:work?f.start.value.trim():null,p_end:work?f.end.value.trim():null,p_overnight:work&&f.overnight.checked,p_break:work?numeric(f.break):0,p_normal:work?numeric(f.normal):0,p_note:f.note.value.trim()}));if(t!==epoch)return;dirty=false;await load(t,id);if(t===epoch)msg('บันทึกร่างแล้ว')})};
+async function saveForm(t,verify){
+ if(!selected||!plan)throw Error('โหลดข้อมูลก่อน');const r=existing(),work=f.kind.value==='work',id=selected;
+ if(work){E.calculate(f.start.value.trim(),f.end.value.trim(),f.overnight.checked,numeric(f.break),numeric(f.normal));if(!E.completed(day,f.end.value.trim(),f.overnight.checked))throw Error('ยังไม่ถึงเวลาออกงาน กรุณาบันทึกหลังจบกะ หรือกรอกเวลาออกจริงที่เกิดขึ้นแล้ว')}
+ if(verify&&!confirm('ยืนยันว่าข้อมูลตรงกับบัตรลงเวลา และตรวจชั่วโมงปกติ / OT แล้ว?'))return;
+ const saved=unwrap(await db.rpc('save_attendance',{p_employment:id,p_date:day,p_schedule:r?.schedule_id||plan.id,p_revision:r?.revision||0,p_type:f.kind.value,p_start:work?f.start.value.trim():null,p_end:work?f.end.value.trim():null,p_overnight:work&&f.overnight.checked,p_break:work?numeric(f.break):0,p_normal:work?numeric(f.normal):0,p_note:f.note.value.trim()}));if(t!==epoch)return;dirty=false;
+ if(verify){try{unwrap(await db.rpc('transition_attendance',{p_id:saved,p_revision:(r?.revision||0)+1,p_action:'verify',p_reason:''}))}catch(e){await load(t,id);if(t===epoch)msg('บันทึกร่างแล้ว แต่ยืนยันตรวจสอบไม่สำเร็จ: '+explain(e),true);return}}
+ await load(t,id);if(t===epoch)msg(verify?'บันทึกและตรวจสอบแล้ว':'บันทึกร่างแล้ว')
+}
+async function quickSave(t,id){
+ if(!canLeave())return;
+ const p=E.planDefaults(planFor(id),day);if(!p||!p.completed)throw Error('กะยังไม่จบหรือไม่สามารถคัดลอกเวลาตามแผนได้');
+ const j=jobs.find(x=>x.id===id);
+ if(!confirm(jobLabel(j)+' — ตรวจบัตรแล้วว่าเข้า '+p.start+' ออก '+p.end+(p.overnight?' (วันถัดไป)':'')+' พัก '+p.breakM+' นาทีจริง? ปกติ '+E.duration(p.normalM)+' / OT '+E.duration(p.work-p.normalM)+' จะบันทึกเป็นร่าง'))return;
+ unwrap(await db.rpc('save_attendance',{p_employment:id,p_date:day,p_schedule:plan.id,p_revision:0,p_type:'work',p_start:p.start,p_end:p.end,p_overnight:p.overnight,p_break:p.breakM,p_normal:p.normalM,p_note:''}));if(t!==epoch)return;dirty=false;await load(t);if(t===epoch)msg('บันทึกตรงตามกะเป็นร่างแล้ว · รอตรวจสอบ')
+}
+async function quickOff(t,id){
+ if(!canLeave()||!confirm(jobLabel(jobs.find(x=>x.id===id))+' — ยืนยันจากข้อมูลจริงว่าไม่ได้ทำงานและเป็นวันหยุด ไม่ใช่วันลาหรือขาดงาน?'))return;
+ if(planFor(id).length)throw Error('มีแผนทำงาน กรุณาระบุเหตุผลในแบบฟอร์ม');
+ unwrap(await db.rpc('save_attendance',{p_employment:id,p_date:day,p_schedule:plan.id,p_revision:0,p_type:'off',p_start:null,p_end:null,p_overnight:false,p_break:0,p_normal:0,p_note:''}));if(t!==epoch)return;dirty=false;await load(t);if(t===epoch)msg('บันทึกวันหยุดเป็นร่างแล้ว')
+}
+form.onsubmit=e=>{e.preventDefault();run(t=>saveForm(t,false))};
+$('attSaveVerify').onclick=()=>run(t=>saveForm(t,true));
 async function transition(t,action){const r=existing();if(!r)throw Error('ยังไม่ได้บันทึก');if(dirty)throw Error('บันทึกการเปลี่ยนแปลงก่อน');let reason='';if(action==='reopen'){const v=prompt('ระบุเหตุผลที่ต้องแก้ไข');if(v===null)return;reason=v.trim();if(!reason)throw Error('ต้องระบุเหตุผล')}else if(!confirm(action==='approve'?'อนุมัติเวลาจริงรายการนี้?':'ยืนยันว่าตรวจสอบกับบัตรลงเวลาแล้ว?'))return;
  const id=selected;unwrap(await db.rpc('transition_attendance',{p_id:r.id,p_revision:r.revision,p_action:action,p_reason:reason}));if(t!==epoch)return;await load(t,id);if(t===epoch)msg('ดำเนินการ '+actionNames[action]+' สำเร็จ')}
 $('attVerify').onclick=()=>run(t=>transition(t,'verify'));$('attApprove').onclick=()=>run(t=>transition(t,'approve'));$('attReopen').onclick=()=>run(t=>transition(t,'reopen'));

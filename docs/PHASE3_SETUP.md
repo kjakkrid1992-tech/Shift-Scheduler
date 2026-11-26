@@ -17,3 +17,8 @@ Run supabase/tests/attendance.sql on isolated test project (rollback). Then down
 - No payroll lock yet: reopening approved records will need integration with payroll closed periods in Phase 5. No production data.
 - Attendance view remains list based for efficient daily verification; calendar UX backlog #5 remains deferred.
 - Browser regression of Phase 1/2/3 and direct API/RLS tests still required.
+
+## Phase 3.1 — simplified entry
+- A single full planned slot prefills actual-time fields (suggestion only). Quick `ตรงตามกะ` saves a draft only after explicit paper-card confirmation and only when the planned end is in the past. Multi-slot or manually shortened plans require manual actual time and breaks. Unscheduled employees have explicit `หยุดจริง` quick action; no assumed attendance.
+- Normal minutes auto-suggest min(net,480) until manually overridden; not an approved payroll rule. `บันทึกและยืนยันตรวจสอบ` performs save then verify; if verification fails, draft persists and an error is shown. Owner approval remains separate. Errors also appear in editor, future exit times rejected locally and by server.
+- No schema change. Test completed single shift, ongoing shift, multiple shifts, unscheduled work, day off, manual override, combined save/verify and stale data in browser before production. Calendar redesign remains deferred.
