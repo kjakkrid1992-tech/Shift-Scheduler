@@ -80,6 +80,7 @@ async function main(){
   assert.equal(asRole('owner',"select to_jsonb(count(*)) from public.payroll_final where period_start='2008-01-26' and paid_at is not null"),1);
   assert.deepEqual(errors,[]);console.log('PASS Chromium V8: 155 attendance rows, atomic verify/approve, five payroll drafts, final close, print five slips, payment, real isolated PostgreSQL');
   console.log('Browser RPC batches:',JSON.stringify(calls.filter(c=>c.count)));
+  if(process.env.V8_SKIP_POC==='1')return;
   // Separate synthetic Tabulator POC; no production dependencies or real data.
   const poc=await browser.newPage();await poc.setContent('<div id="grid"></div>');await poc.addStyleTag({path:path.join(process.env.V8_TOOLS,'node_modules/tabulator-tables/dist/css/tabulator.min.css')});await poc.addScriptTag({path:path.join(process.env.V8_TOOLS,'node_modules/tabulator-tables/dist/js/tabulator.min.js')});
   await poc.evaluate(()=>{window.grid=new Tabulator('#grid',{data:Array.from({length:155},(_,i)=>({id:i+1,name:'พนักงาน '+(Math.floor(i/31)+1),start:'06:30',locked:i===1})),index:'id',height:500,selectableRange:1,clipboard:true,clipboardCopyRowRange:'range',clipboardPasteParser:'range',clipboardPasteAction:'range',columns:[{title:'พนักงาน',field:'name'},{title:'เข้า',field:'start',editor:'input',editable:cell=>!cell.getRow().getData().locked}]});window.grid.on('tableBuilt',()=>window.__built=true)});

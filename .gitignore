@@ -8,3 +8,12 @@
 node_modules/
 supabase/.temp/
 supabase/.branches/
+
+# V8 local-only tools, database runtime and private exports
+/local-v8-runtime/
+/.v8-test-tools/
+/legacy-review*.json
+/v8/config.local.*
+*.dump
+*.backup
+__pycache__/

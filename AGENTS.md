@@ -1,2 +1,4 @@
 # V8 development rules
 Work only in development-v8. Preserve v2 and main; no force push. Do not run SQL on production, import identifiable employee records, close a real payroll, or claim acceptance without evidence. Pin and audit any dependency. Preserve effective dated rates, approval/RLS, audit, atomic payroll close and source snapshots. Treat missing rules as blockers, not zero. Run node --test tests/*.test.js and SQL regression on disposable Postgres; add browser and user workflow verification. See docs/V8_ROADMAP.md. No production cutover before reconciliation and recovery test.
+
+Cost rule: no paid service or new hosted Supabase project/branch; do not enable or trigger GitHub-hosted Actions. Use scripts/test-v8-local.cjs [--full] and the isolated local runtime. Do not link the local runtime to a cloud project. All commits should include [skip ci].

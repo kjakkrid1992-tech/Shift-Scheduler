@@ -11,3 +11,10 @@ const key=x=>x.employment+'|'+x.day,expected=[{employment:'a',day:'d',revision:2
 assert.equal(R.validateBatchReply(reply,expected,key).get('a|d').id,'r1');
 for(const invalid of [null,[],[reply[0],reply[0]],[reply[0],{...reply[1],revision:1}],[reply[0],{...reply[1],status:'draft'}],[reply[0],{...reply[1],id:'wrong'}],[reply[0],{...reply[1],id:''}],[reply[0],{...reply[1],employment:'c'}]])assert.throws(()=>R.validateBatchReply(invalid,expected,key));
 console.log('PASS config endpoint/key restrictions and batch response integrity');
+
+assert.equal(R.resolveConfig(storage,{url:'http://127.0.0.1:54321',publishableKey:jwt('anon'),localOnly:true}).local,true);
+R.saveConfig(storage,{url:'https://abc.supabase.co',publishableKey:'sb_publishable_abc'});
+assert.equal(R.resolveConfig(storage,{url:'http://127.0.0.1:54321',publishableKey:jwt('anon'),localOnly:true}).url,'http://127.0.0.1:54321');
+assert.equal(R.resolveConfig(storage,{url:'https://abc.supabase.co',publishableKey:'sb_publishable_abc',localOnly:true}),null);
+assert.equal(R.resolveConfig(storage,{url:'http://127.0.0.1:54321',publishableKey:jwt('service_role'),localOnly:true}),null);
+console.log('PASS isolated local mode cannot be redirected by browser config');

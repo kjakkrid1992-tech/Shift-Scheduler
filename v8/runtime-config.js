@@ -10,7 +10,7 @@ function normalizeConfig(raw){
  if(!/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)&&!(local&&anonKey(key)))throw Error('ใช้ publishable key เท่านั้น (local ใช้ anon JWT ได้) ห้ามใช้ secret/service_role');
  return {url,publishableKey:key,local};
 }
-function resolveConfig(storage,fallback){let raw;try{raw=storage?.getItem(storageKey)}catch{}if(raw){try{return normalizeConfig(JSON.parse(raw))}catch{}}try{return normalizeConfig(fallback)}catch{return null}}
+function resolveConfig(storage,fallback){if(fallback?.localOnly===true){try{const c=normalizeConfig(fallback);return c.local?c:null}catch{return null}}let raw;try{raw=storage?.getItem(storageKey)}catch{}if(raw){try{return normalizeConfig(JSON.parse(raw))}catch{}}try{return normalizeConfig(fallback)}catch{return null}}
 function saveConfig(storage,raw){const c=normalizeConfig(raw);storage.setItem(storageKey,JSON.stringify({url:c.url,publishableKey:c.publishableKey}));return c}
 function validateBatchReply(result,expected,identity){
  if(!Array.isArray(result)||result.length!==expected.length)throw Error('ผลตอบกลับไม่ครบ — ตรวจข้อมูลที่เซิร์ฟเวอร์ก่อนส่งซ้ำ');
