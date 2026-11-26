@@ -29,5 +29,6 @@ function knownAmounts(source){
  return {base,ot,baseManualDays,otManualDays,workDays}
 }
 function aggregate(items){for(const k of keys)if(!Number.isSafeInteger(items[k])||items[k]<0||items[k]>1000000000)throw Error('Invalid item '+k);const otherIncome=incomeKeys.reduce((a,k)=>a+items[k],0),otherDeduction=deductionKeys.reduce((a,k)=>a+items[k],0);return {base:items.base,ot:items.ot,otherIncome,advance:items.advance,otherDeduction}}
-const api={parseAmount,summarize,net,canonical,knownAmounts,aggregate,itemLabels,keys,incomeKeys,deductionKeys};if(typeof module==='object'&&module.exports)module.exports=api;else root.PayrollEngine=Object.freeze(api)
+function completeSuggestions(source){const s=summarize(source),k=knownAmounts(source);if(s.missing||s.unapproved||s.missingRate||source.as_of<source.period_end)return {};const out={};if(source.pay_type!=='monthly'&&!k.baseManualDays)out.base=k.base;if(!k.otManualDays)out.ot=k.ot;return out}
+const api={completeSuggestions,parseAmount,summarize,net,canonical,knownAmounts,aggregate,itemLabels,keys,incomeKeys,deductionKeys};if(typeof module==='object'&&module.exports)module.exports=api;else root.PayrollEngine=Object.freeze(api)
 })(globalThis);

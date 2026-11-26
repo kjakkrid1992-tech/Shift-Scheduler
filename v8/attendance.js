@@ -30,7 +30,7 @@ async function load(t,keep=null){
  // Do not leave stale rows editable if load fails.
  hide('attContent');hide('attEditor');bulk.clear();selected=null;dirty=false;plan=null;day=null;
  const pp=unwrap(await db.from('pay_periods').select('id,start_date,end_date').lte('start_date',d).gte('end_date',d).maybeSingle());if(t!==epoch)return;
- if(!pp){msg('ไม่พบรอบจัดกะสำหรับวันนี้',true);return}
+ if(!pp){msg('ยังไม่มีรอบนี้ · เปิดลงเวลาทั้งรอบเพื่อบันทึกจากบัตรจริงครั้งแรก',true);return}
  const pl=unwrap(await db.from('shift_schedules').select('id,version').eq('period_id',pp.id).eq('department_id',dp).eq('status','confirmed').order('version',{ascending:false}).limit(1).maybeSingle());if(t!==epoch)return;
  
  const [a,b,c]=await Promise.all([

@@ -106,4 +106,34 @@ end $$;
 revoke all on function public.save_attendance_period(date,uuid,text,jsonb) from public,anon,authenticated;
 grant execute on function public.save_attendance_period(date,uuid,text,jsonb) to authenticated;
 
+-- Capability check prevents V8 UI from mutating a baseline-only backend.
+create function public.v8_workspace_capabilities()
+returns jsonb language plpgsql stable security invoker set search_path='' as $
+begin
+ if coalesce(staff_private.staff_role(),'') not in ('owner','manager') then raise exception using errcode='42501',message='Staff access required';end if;
+ return jsonb_build_object('version',8,'attendance_batch',true,'payroll_batch',true);
+end $;
+revoke all on function public.v8_workspace_capabilities() from public,anon,authenticated;
+grant execute on function public.v8_workspace_capabilities() to authenticated;
+-- Transactional payroll draft worksheet; original save_payroll_items rechecks source and revision.
+create function public.save_payroll_period_drafts(p_month date,p_rows jsonb)
+returns jsonb language plpgsql security definer set search_path='' as $
+declare x jsonb; j uuid; rid uuid; rev integer; result jsonb:='[]'::jsonb;
+begin
+ if coalesce(staff_private.staff_role(),'') not in ('owner','manager') then raise exception using errcode='42501',message='Staff access required';end if;
+ if p_month is null or extract(day from p_month)<>1 or p_month<'1900-02-01' or p_month>'2199-12-01' or jsonb_typeof(p_rows) is distinct from 'array' then raise exception 'Invalid payroll worksheet';end if;
+ if jsonb_array_length(p_rows) not between 1 and 50 or (select count(distinct value->>'employment') from jsonb_array_elements(p_rows))<>jsonb_array_length(p_rows) then raise exception 'Invalid or duplicate payroll worksheet rows';end if;
+ for x in select value from jsonb_array_elements(p_rows) order by value->>'employment' loop
+  j:=(x->>'employment')::uuid;rev:=(x->>'revision')::integer;
+  if j is null or rev is null or rev<0 then raise exception 'Invalid payroll worksheet row';end if;
+  begin
+   rid:=public.save_payroll_items(j,p_month,rev,x->'source',x->'items',x->>'note');
+   result:=result||jsonb_build_array(jsonb_build_object('employment',j,'id',rid,'revision',rev+1));
+  exception when others then raise exception using errcode=sqlstate,message='Payroll worksheet '||j::text||': '||sqlerrm;
+  end;
+ end loop;
+ return result;
+end $;
+revoke all on function public.save_payroll_period_drafts(date,jsonb) from public,anon,authenticated;
+grant execute on function public.save_payroll_period_drafts(date,jsonb) to authenticated;
 commit;

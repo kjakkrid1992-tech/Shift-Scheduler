@@ -23,6 +23,7 @@ function stagePaste(rows,index,field,text,canEdit){
   if(cells.some(c=>c.startsWith('"')&&c.endsWith('"')))throw Error('ไม่รองรับ Excel cell ที่มีอักขระพิเศษแบบ quoted; ใช้ข้อความธรรมดา');
   const patch={},next={...row};for(let k=0;k<cells.length;k++){const name=fields[start+k];patch[name]=parse(name,cells[k]);next[name]=patch[name]}
   if(!next.kind&&(next.start||next.end))patch.kind=next.kind='work';
+  if(next.kind==='work'&&row.kind&&row.kind!=='work'){if(!('breakM' in patch))patch.breakM=next.breakM='';if(!('normalM' in patch))patch.normalM=next.normalM='';patch.manualNormal=false;next.manualNormal=false}
   if(next.kind!=='work'&&['start','end','overnight','breakM','normalM'].some(k=>Object.prototype.hasOwnProperty.call(patch,k)&&patch[k]!==''&&patch[k]!==0&&patch[k]!==false))throw Error('แถว '+(i+1)+' ไม่ใช่วันทำงาน');
   if(next.kind&&next.kind!=='work'){Object.assign(patch,{start:'',end:'',overnight:false,breakM:0,normalM:0,manualNormal:false})}
   else if(Object.prototype.hasOwnProperty.call(patch,'normalM'))patch.manualNormal=true;

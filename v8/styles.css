@@ -49,3 +49,5 @@ section{border-color:var(--line);box-shadow:0 2px 10px #18395707;padding:22px;bo
 
 /* V8 worksheet: stable headers, keyboard focus and compact controls */
 .am-table input:focus,.am-table select:focus{outline:2px solid #2365a7;outline-offset:1px}.am-table thead th{position:sticky;top:0;z-index:2}.am-table td input[type=time]{min-width:92px}.am-table td input[type=number]{min-width:65px}.am-table td:first-child{min-width:32px}.am-scroll{max-height:65vh;overflow:auto}
+
+.am-table input[data-field=start],.am-table input[data-field=end]{min-width:84px;width:84px}.pr-matrix-scroll{max-height:62vh;overflow:auto}.pr-matrix-scroll table{min-width:1550px}.pr-matrix-scroll th{position:sticky;top:0;z-index:2}.pr-matrix-scroll td:nth-child(2){min-width:170px}.pr-matrix-scroll td:nth-child(2) small{display:block;white-space:normal}.pr-matrix-scroll input[inputmode=decimal]{min-width:82px;width:82px;text-align:right}.pr-matrix-scroll input[type=text]:not([inputmode]){min-width:165px}.v8-slip{break-inside:avoid}.v8-slip:not(:last-child){break-after:page;page-break-after:always}
