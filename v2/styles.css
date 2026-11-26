@@ -15,3 +15,5 @@ html{scroll-padding-top:90px}.date-hint{display:block;font-size:11px;font-weight
 #prContent details{margin:12px 0;padding:12px;border:1px solid #dce3ec;border-radius:8px}#prForm textarea{width:100%;display:block;border:1px solid #c7d0da;border-radius:8px;padding:10px;font:inherit}#prSuggestions{line-height:1.6}#prUseSuggestion{margin:10px 0}#prSlip{padding:20px}@media print{body.printing-payroll header,body.printing-payroll #message,body.printing-payroll .tabs,body.printing-payroll #payrollView>:not(#prSlip){display:none!important}body.printing-payroll main{max-width:none;padding:0}body.printing-payroll #payrollView{border:none;padding:0}body.printing-payroll #prSlip{display:block!important}}
 
 #prForm h3{margin:22px 0 8px;border-bottom:1px solid #dce3ec;padding-bottom:6px}#prZeroExtras{margin:10px 0}#prSlip td:last-child{text-align:right;white-space:nowrap}
+
+#prOverview{margin:18px 0;padding:14px;border:1px solid #dce3ec;border-radius:8px}#prOverview input{min-width:160px}#prOverview textarea{width:100%;font:inherit;padding:8px;border:1px solid #c7d0da;border-radius:8px}#prFinalActions{margin-top:16px;padding:12px;border:1px solid #dce3ec;border-radius:8px}

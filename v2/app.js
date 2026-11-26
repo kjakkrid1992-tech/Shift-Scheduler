@@ -90,5 +90,5 @@ $('tabStaff').onclick=()=>{if(!window.PayrollPage.leave()||!window.AdvancePage.l
 $('tabSchedule').onclick=()=>{if(!window.PayrollPage.leave()||!window.AdvancePage.leave()||!window.AttendancePage.leave())return;window.SchedulerPage.open(db,staff,departments)};
 $('tabAttendance').onclick=()=>{if(!$('attendanceView').hidden)return;if(!window.PayrollPage.leave()||!window.AdvancePage.leave()||!window.SchedulerPage.staffTab())return;window.AttendancePage.open(db,role,departments)};
 $('tabAdvance').onclick=()=>{if(!$('advanceView').hidden||!window.PayrollPage.leave()||!window.AttendancePage.leave()||!window.SchedulerPage.staffTab())return;window.AdvancePage.open(db,role,departments)};
-$('tabPayroll').onclick=()=>{if(!$('payrollView').hidden||!window.AdvancePage.leave()||!window.AttendancePage.leave()||!window.SchedulerPage.staffTab())return;window.PayrollPage.open(db)};
+$('tabPayroll').onclick=()=>{if(!$('payrollView').hidden||!window.AdvancePage.leave()||!window.AttendancePage.leave()||!window.SchedulerPage.staffTab())return;window.PayrollPage.open(db,role)};
 init();
