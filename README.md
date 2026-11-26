@@ -1,3 +1,9 @@
+# Version 8 — Free local candidate
+
+**V8:** use `START-V8-LOCAL.cmd` (Windows) or `node scripts/start-v8-local.cjs` after installing the free local prerequisites. No new Supabase cloud project/branch. Full test: `TEST-V8-LOCAL.cmd` or `node scripts/test-v8-local.cjs --full`. Unit only: `node scripts/test-v8-local.cjs`. See [คู่มือ V8 ฟรี](docs/V8_FREE_SETUP.md) and [validation status](docs/V8_DELIVERY.md). RC2 remains separate; no migration has been applied to the existing hosted project.
+
+---
+
 # Shift Scheduler
 
 The legacy application remains at index.html. This branch adds Phase 1–5A pilot of V2 at v2/index.html; it is not deployed or production-ready.

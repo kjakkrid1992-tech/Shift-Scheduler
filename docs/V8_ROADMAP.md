@@ -11,3 +11,5 @@ Free path: START-V8-LOCAL.cmd launches the isolated local Supabase runtime; no h
 Sources: https://github.com/tabulator-tables/tabulator ; https://www.tabulator.info/docs/6.x/clipboard/ ; https://github.com/6pac/SlickGrid ; https://github.com/frappe/hrms ; https://github.com/horilla/horilla-hr
 
 Browser harness executes actual Chromium against disposable PostgreSQL through a test-only transport with synthetic auth claims; no deployed Supabase Auth/PostgREST is tested. Tabulator POC uses pinned test-only dependency. No production runtime dependency added.
+
+Free-only acceptance: no paid cloud branch or hosted CI. Test all new changes with local scripts; current JavaScript assertion tests passed, full revised local runtime remains to be exercised before production.
