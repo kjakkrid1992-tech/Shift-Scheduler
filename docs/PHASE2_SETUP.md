@@ -10,3 +10,5 @@
 - Test print and cross-account visibility. Reopen from another browser/account after saving. Do not use real employee data until release review.
 - Scope/limits: no previous-period carryover in auto scheduling yet; no global coverage across departments; eligibility checked for shift work_date, not entire overnight duration; no role-specific staffing rules or approved leave workflow yet. Historical names reference employee master, not name snapshot. Existing employment can later be ended retroactively; historical confirmed plans remain as recorded, Attendance must handle exceptions. Schedule only, not payroll.
 - SQL tests: run supabase/tests/scheduler.sql in test project after migration, rolls back synthetic rows. JS engine tests: node tests/schedule-engine.test.js. Browser + live SQL tests must pass before merging or production.
+
+- Pilot limits: maximum 10 active templates and 500 rows per schedule. SQL test also verifies weekly off and leave cannot be confirmed. Table edits disabled during save; direct database confirmation checks both date restrictions.

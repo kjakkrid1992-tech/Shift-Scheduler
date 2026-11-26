@@ -28,6 +28,14 @@ begin
   perform public.save_shift_schedule(sid,0,payload,'{}',false,false);
   raise exception 'FAIL stale write';
  exception when raise_exception then if sqlerrm not like 'STALE_SCHEDULE:%' then raise;end if;end;
+ begin
+  perform public.save_shift_schedule(sid,1,payload,jsonb_build_object(job::text,jsonb_build_object('off_days',jsonb_build_array(extract(dow from date '2098-01-26')::integer),'leave_dates','[]'::jsonb)),true,true);
+  raise exception 'FAIL weekly off day allowed';
+ exception when raise_exception then if sqlerrm<>'Assigned employee is unavailable' then raise;end if;end;
+ begin
+  perform public.save_shift_schedule(sid,1,payload,jsonb_build_object(job::text,jsonb_build_object('off_days','[]'::jsonb,'leave_dates',jsonb_build_array('2098-01-26'))),true,true);
+  raise exception 'FAIL leave date allowed';
+ exception when raise_exception then if sqlerrm<>'Assigned employee is unavailable' then raise;end if;end;
  rev:=public.save_shift_schedule(sid,1,payload,'{}',true,true);
  if rev<>2 or not exists(select 1 from public.shift_schedules where id=sid and status='confirmed') then raise exception 'Confirm failed';end if;
  begin
