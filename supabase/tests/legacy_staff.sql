@@ -20,6 +20,15 @@ begin
  emp:=public.review_legacy_identity(ids,null,jsonb_build_object('code',code,'first',sh,'last','Synthetic'),'Synthetic verified identity');
  if (select count(*) from public.legacy_payslips where source_sheet=sh and employee_id=emp and link_revision=1)<>2 or exists(select 1 from public.employment_records where employee_id=emp) then raise exception 'FAIL identity only';end if;
  if (select count(*) from public.legacy_identity_links where employee_id=emp)<>2 then raise exception 'FAIL audit';end if;
+ perform public.import_legacy_payroll(repeat('b',64),jsonb_build_array(jsonb_set(jsonb_set(rec,'{row}','3'),'{period_label}',to_jsonb(sh||'-3')),jsonb_set(jsonb_set(rec,'{row}','4'),'{source_name}','""')));
+ select jsonb_agg(jsonb_build_object('id',id,'revision',link_revision)) into ids from public.legacy_payslips where source_sheet=sh and source_row=3;
+ perform public.review_legacy_identity(ids,emp,null,'Synthetic existing match');
+ if not exists(select 1 from public.legacy_payslips where source_sheet=sh and source_row=3 and employee_id=emp) then raise exception 'FAIL existing match';end if;
+ select jsonb_agg(jsonb_build_object('id',id,'revision',link_revision)) into ids from public.legacy_payslips where source_sheet=sh and source_row=4;
+ begin
+  perform public.review_legacy_identity(ids,emp,null,'Unnamed');raise exception 'FAIL unnamed group';
+ exception when raise_exception then if sqlerrm<>'Unnamed slip requires individual review' then raise;end if;end;
+ select jsonb_agg(jsonb_build_object('id',id,'revision',0)) into ids from public.legacy_payslips where source_sheet=sh and source_row=1;
  begin
   perform public.review_legacy_identity(ids,emp,null,'Synthetic repeat');raise exception 'FAIL stale';
  exception when raise_exception then if sqlerrm not like 'STALE_LEGACY_LINK:%' then raise;end if;end;
