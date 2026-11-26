@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const {parseDate,displayDate,bangkokToday,ratesFor}=require('../v2/staff-dates.js');
+assert.equal(parseDate('26/11/2026'),'2026-11-26');
+assert.equal(parseDate('01/12/2026'),'2026-12-01');
+assert.equal(parseDate('29/02/2024'),'2024-02-29');
+for(const x of ['31/02/2026','29/02/2026','11/26/2026','26/11/2569','2026-11-26','1/1/2026',''])assert.throws(()=>parseDate(x));
+assert.equal(displayDate('2026-01-11'),'11/01/2026');
+assert.equal(bangkokToday(new Date('2026-11-25T17:00:00Z')),'2026-11-26');
+const job={compensation_history:[{id:'future',effective_from:'2026-12-01'},{id:'old',effective_from:'2026-01-11'},{id:'now',effective_from:'2026-11-26'}]};
+assert.equal(ratesFor(job,'2026-11-26').current.id,'now');
+assert.equal(ratesFor(job,'2026-11-26').future[0].id,'future');
+assert.equal(ratesFor(job,'2025-12-31').current,null);
+assert.equal(ratesFor({},'2026-11-26').current,null);
+assert.equal(job.compensation_history[1].id,'old');
+console.log('PASS: dates, Bangkok timezone, rate selection, history preservation');

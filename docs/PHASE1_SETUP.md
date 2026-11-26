@@ -1,7 +1,7 @@
 
 # Shift Scheduler V2 — Phase 1 Foundation
 
-สถานะ: implementation draft; ยังไม่เชื่อมฐานข้อมูลจริง / ยังไม่ใช่ระบบ Production
+สถานะ: Phase 1 pilot เชื่อม Supabase และทดสอบ Owner/Manager บน test project แล้ว; ยังไม่ใช่ Production
 Branch: development-v2. หน้าเดิม index.html และ LocalStorage เดิมไม่ถูกแก้ไข
 หน้า V2: v2/index.html (แยกจาก production)
 
@@ -18,6 +18,7 @@ Branch: development-v2. หน้าเดิม index.html และ LocalStora
 ## Setup สำหรับเจ้าของ (ทดสอบบน project ใหม่ก่อน)
 1. สร้าง project แยกใน https://supabase.com/dashboard ; เก็บ DB password ไว้เอง ไม่ส่งทางแชทหรือ GitHub.
 2. ใน SQL Editor รันไฟล์ supabase/migrations/20261126000100_foundation.sql ครั้งเดียว (หรือผ่าน Supabase CLI migrations บน project ใหม่).
+   จากนั้นรัน supabase/migrations/20261126000200_compensation_role_guard.sql ตามลำดับ (สำหรับฐานเดิมที่ติดตั้ง patch แล้วไม่ต้องรันซ้ำ).
 3. เปิด Data API ให้ expose public schema (ห้าม expose staff_private).
 4. Authentication: ปิด Allow new users to sign up; สร้างบัญชี Owner และ Manager ใน Authentication > Users โดยตั้ง password ผ่าน Dashboard โดยตรง; เปิด/ยืนยัน email ตามนโยบาย.
 5. คัดลอก UUID จาก Authentication > Users แล้วรัน SQL นี้โดยแทนค่า placeholder ด้วย UUID จริงใน SQL Editor เท่านั้น:
