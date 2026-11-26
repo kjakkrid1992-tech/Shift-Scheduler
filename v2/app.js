@@ -9,30 +9,31 @@ const payNames={daily:'รายวัน',hourly:'รายชั่วโม�
 let db, role=null, staff=[], departments=[], selected=null, editing=null, busy=false, epoch=0;
 const current=e=>e && !e.end_date;
 const latest=e=>[...(e.employment_records||[])].sort((a,b)=>b.start_date.localeCompare(a.start_date))[0];
+const jobOn=(e,day)=>(e.employment_records||[]).find(j=>j.start_date<=day&&(!j.end_date||j.end_date>=day));
 const text=(tag,value)=>{const el=document.createElement(tag);el.textContent=value??'';return el};
 const msg=(value='',error=false)=>{$('message').textContent=value;$('message').classList.toggle('error',error)};
 function unwrap(r){if(r.error)throw r.error;return r.data}
 function errorMessage(e){return e?.code==='23505'?'รหัสพนักงานหรือวันที่เรทซ้ำ':e?.code==='23P01'?'ช่วงการจ้างซ้อนกับประวัติเดิม':e?.code==='42501'?'ไม่มีสิทธิ์ทำรายการ':e?.message||'เกิดข้อผิดพลาด'}
 function hide(id,value=true){$(id).hidden=value}
 function clearUI(){clearReports();$('managementReport').open=false;$('profileReport').open=false;window.LegacyPage.reset();$('tabLegacy').hidden=true;window.PayrollPage.reset();window.AdvancePage.reset();window.AttendancePage.reset();window.SchedulerPage.reset();role=null;staff=[];departments=[];selected=null;editing=null;for(const id of ['workspace','detail','editor','logout'])hide(id);$('staffRows').replaceChildren();$('detailBody').replaceChildren();$('detailTitle').textContent='';for(const id of ['staffForm','rateForm','endForm','rehireForm','loginForm'])$(id).reset()}
-async function action(fn){if(busy)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn()}catch(e){msg(errorMessage(e),true)}finally{busy=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+async function action(fn){if(busy)return;busy=true;const buttons=[...document.querySelectorAll('button')].filter(b=>!b.disabled);for(const b of buttons)b.disabled=true;try{await fn()}catch(e){msg(errorMessage(e),true)}finally{busy=false;for(const b of buttons)if(b.isConnected)b.disabled=false}}
 function populateDepartments(){for(const id of ['staffForm','rehireForm']){const select=$(id).elements.department;select.replaceChildren();for(const d of departments.filter(d=>d.active)){const opt=new Option(d.name,d.id);select.add(opt)}}}
 async function refresh(){const ticket=epoch;const [a,b]=await Promise.all([db.from('employees').select('id,employee_code,first_name,last_name,nickname,phone,employment_records(id,department_id,position,employment_type,start_date,end_date,status,compensation_history(id,base_rate,ot_rate,effective_from,pay_type))').order('employee_code'),db.from('departments').select('id,name,active').order('name')]);if(ticket!==epoch)return;staff=unwrap(a);departments=unwrap(b);populateDepartments();render();if(selected){if(staff.some(e=>e.id===selected))showDetail(selected);else hide('detail')}}
 function render(){
   const today=bangkokToday(),q=$('search').value.toLowerCase().trim(),filter=$('filter').value,rows=$('staffRows');
   rows.replaceChildren();
-  const open=staff.filter(e=>current(latest(e))),missing=open.filter(e=>!ratesFor(latest(e),today).current);
-  $('total').textContent=staff.length;$('activeCount').textContent=open.length;$('formerCount').textContent=staff.filter(e=>latest(e)&&!current(latest(e))).length;
+  const open=staff.filter(e=>jobOn(e,today)),missing=open.filter(e=>!ratesFor(jobOn(e,today),today).current);
+  $('total').textContent=staff.length;$('activeCount').textContent=open.length;$('formerCount').textContent=staff.filter(e=>!jobOn(e,today)&&latest(e)?.end_date&&latest(e).end_date<today).length;$('identityCount').textContent=staff.filter(e=>!latest(e)).length;
   $('rateWarning').hidden=!missing.length;
   $('rateWarning').textContent=missing.length?'พนักงานที่ยังไม่มีเรทค่าแรงที่มีผล ณ '+displayDate(today)+' จำนวน '+missing.length+' คน · ตรวจสอบก่อนคำนวณเงินเดือน':'';
   for(const e of staff){
-    const j=latest(e),isOpen=current(j),r=ratesFor(j,today);
-    if(filter==='current'&&!isOpen||filter==='former'&&(!j||isOpen)||filter==='missing-rate'&&(!isOpen||r.current))continue;
+    const live=jobOn(e,today),j=live||latest(e),isOpen=!!live,r=ratesFor(j,today);
+    if(filter==='current'&&!isOpen||filter==='former'&&(!j?.end_date||j.end_date>=today||isOpen)||filter==='missing-rate'&&(!isOpen||r.current)||filter==='identity'&&!!j||filter==='future'&&(!j||isOpen||j.start_date<=today))continue;
     if(q&&![e.employee_code,e.first_name,e.last_name,e.nickname,j?.position].join(' ').toLowerCase().includes(q))continue;
     const tr=text('tr',''),name=text('td',e.employee_code+' · '+e.first_name+' '+e.last_name);
     if(e.nickname)name.append(text('small',e.nickname));
-    const status=text('td',statusNames[j?.status]||'ทะเบียนบุคคล / ยังไม่มีการจ้าง');
-    if(isOpen&&j.start_date>today)status.append(text('small','เริ่มงาน '+displayDate(j.start_date)));
+    const status=text('td',isOpen?'ปฏิบัติงาน / '+(statusNames[j.status]||j.status):j?.start_date>today?'ยังไม่เริ่มงาน':statusNames[j?.status]||'ทะเบียนบุคคล / ยังไม่มีการจ้าง');
+    if(j&&j.start_date>today)status.append(text('small','เริ่มงาน '+displayDate(j.start_date)));
     const rate=text('td',isOpen&&j.start_date<=today&&r.current?money(r.current.base_rate)+' บาท/'+payUnit[j.employment_type]:isOpen&&!r.current?'ยังไม่มีเรท':'—');
     if(isOpen&&!r.current)rate.className='warning-text';
     if(isOpen&&r.future.length)rate.append(text('small','เรทถัดไป '+displayDate(r.future[0].effective_from)));
@@ -74,7 +75,7 @@ function showDetail(id){
 function edit(id=null){editing=id;const f=$('staffForm');f.reset();const e=staff.find(x=>x.id===id);$('editorTitle').textContent=e?'แก้ไขข้อมูลทั่วไป':'เพิ่มพนักงาน';f.elements.code.disabled=!!e;hide('employmentFields',!!e);for(const field of ['department','position','start'])f.elements[field].required=!e;if(e){f.elements.code.value=e.employee_code;f.elements.first.value=e.first_name;f.elements.last.value=e.last_name;f.elements.nickname.value=e.nickname;f.elements.phone.value=e.phone}hide('editor',false);$('editor').scrollIntoView({block:'start'})}
 function vals(f){const v=Object.fromEntries(new FormData(f));for(const el of f.querySelectorAll('[data-date]')){if(el.required||(!el.closest('[hidden]')&&el.value.trim()))v[el.name]=parseDate(el.value)}return v}
 function selectedJob(){const e=staff.find(x=>x.id===selected),j=e&&latest(e);if(!current(j))throw new Error('ไม่พบการจ้างที่ยังมีผล');return j}
-async function startSession(session){const ticket=++epoch;clearUI();msg();if(!session){hide('login',false);return}hide('login');try{const p=unwrap(await db.from('user_profiles').select('display_name,role,active').eq('user_id',session.user.id).maybeSingle());if(ticket!==epoch)return;if(!p?.active||!['owner','manager'].includes(p.role)){msg('บัญชีนี้ยังไม่ได้รับสิทธิ์จากผู้ดูแล',true);hide('logout',false);return}role=p.role;$('profileLegacyLoad').hidden=role!=='owner';$('reportMonth').value=reportDefault();$('tabLegacy').hidden=role!=='owner';$('identity').textContent=p.display_name+' · '+(role==='owner'?'เจ้าของ':'ผู้จัดการ');await refresh();if(ticket!==epoch)return;hide('workspace',false);hide('logout',false);window.SchedulerPage.staffTab()}catch(e){if(ticket===epoch){msg(errorMessage(e),true);hide('logout',false)}}}
+async function startSession(session){const ticket=++epoch;clearUI();msg();if(!session){hide('login',false);return}hide('login');try{const p=unwrap(await db.from('user_profiles').select('display_name,role,active').eq('user_id',session.user.id).maybeSingle());if(ticket!==epoch)return;if(!p?.active||!['owner','manager'].includes(p.role)){msg('บัญชีนี้ยังไม่ได้รับสิทธิ์จากผู้ดูแล',true);hide('logout',false);return}role=p.role;$('profileLegacyLoad').hidden=role!=='owner';$('reportMonth').value=reportDefault();$('tabLegacy').hidden=role!=='owner';$('identity').textContent=p.display_name+' · '+(role==='owner'?'เจ้าของ':'ผู้จัดการ');await refresh();if(ticket!==epoch)return;$('filter').value=staff.some(e=>jobOn(e,bangkokToday()))?'current':'all';render();hide('workspace',false);hide('logout',false);window.SchedulerPage.staffTab()}catch(e){if(ticket===epoch){msg(errorMessage(e),true);hide('logout',false)}}}
 function bind(id,fn){$(id).addEventListener('submit',e=>{e.preventDefault();action(()=>fn(e.currentTarget))})}
 bind('loginForm',async f=>{const v=vals(f);const data=unwrap(await db.auth.signInWithPassword({email:v.email,password:v.password}));f.reset();await startSession(data.session)});
 $('logout').onclick=()=>action(async()=>{if(window.SchedulerPage.isBusy()||window.AttendancePage.isBusy()||window.AdvancePage.isBusy()||window.PayrollPage.isBusy()||window.LegacyPage.isBusy())return;if((window.SchedulerPage.hasUnsaved()||window.AttendancePage.hasUnsaved()||window.AdvancePage.hasUnsaved()||window.PayrollPage.hasUnsaved()||window.LegacyPage.hasUnsaved())&&!confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากระบบหรือไม่?'))return;++epoch;clearUI();unwrap(await db.auth.signOut());hide('login',false);msg('ออกจากระบบแล้ว')});

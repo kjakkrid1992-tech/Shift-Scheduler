@@ -25,3 +25,5 @@ Phase 7.1: [calendar-first schedule pilot](docs/PHASE7_CALENDAR.md).
 Phase 7.2–7.5: [bulk attendance and reporting pilot](docs/PHASE7_BULK_REPORT.md).
 
 Phase 7.6B: separate post-payment cash adjustments (01400), see consolidated acceptance guide. No automatic withholding or modification of original payroll.
+
+RC1: [single acceptance and backup guide](docs/PHASE7_ACCEPTANCE.md) · [read-only preflight](supabase/tests/preflight_readonly.sql). No real-data go-live until sign-off.
