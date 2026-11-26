@@ -14,7 +14,7 @@ const scope=()=>jobs.filter(relevant);
 const mark=()=>{dirty=true;$('scheduleState').textContent='ร่าง · ยังไม่ได้บันทึก'};
 function leaveOK(){return !dirty||confirm('มีตารางที่ยังไม่ได้บันทึก ต้องการละทิ้งการแก้ไขหรือไม่?')}
 function setTab(staff){hide('employeeView',!staff);hide('schedulerView',staff);for(const [id,on] of [['tabStaff',staff],['tabSchedule',!staff]]){$(id).classList.toggle('primary',on);$(id).setAttribute('aria-pressed',String(on))}}
-function staffTab(){if(busy)return;if(!leaveOK())return;dirty=false;setTab(true);s=null;rows=[];hide('scheduleContent');notify()}
+function staffTab(){if(busy||!leaveOK())return false;dirty=false;setTab(true);s=null;rows=[];hide('scheduleContent');notify();return true}
 function reset(){$('scheduleContent').inert=false;token++;db=null;jobs=[];depts=[];s=null;rows=[];prefs={};versions=[];dirty=false;busy=false;range=null;dept=null;chosen.clear();for(const id of ['scheduleRows','schedulePrefs','scheduleTotals','scheduleWarnings','scheduleVersions','scheduleFocus','scheduleDept'])$(id).replaceChildren();$('scheduleTitle').textContent='';$('scheduleState').textContent='';hide('scheduleContent');notify();setTab(true)}
 function getMonth(){const m=/^(\d{2})\/(\d{4})$/.exec($('scheduleMonth').value.trim());if(!m)throw Error('กรอกรอบเดือน MM/YYYY เช่น 12/2026');const iso=m[2]+'-'+m[1];return {month:iso+'-01',...E.period(iso)}}
 function syncJobs(staff){jobs=staff.flatMap(e=>(e.employment_records||[]).map(j=>({...j,employee_id:e.id,code:e.employee_code,name:e.nickname||[e.first_name,e.last_name].filter(Boolean).join(' ')})))}
@@ -106,5 +106,5 @@ $('scheduleSave').onclick=()=>run(t=>persist(false,t));$('scheduleConfirm').oncl
 $('scheduleRevise').onclick=()=>run(async t=>{if(!confirm('สร้างร่างเวอร์ชันใหม่จากตารางล่าสุด? ตารางเดิมจะไม่ถูกแก้ไข'))return;const id=unwrap(await db.rpc('open_shift_schedule',{p_department:dept,p_month:range.month,p_revise:true}));if(t!==token)return;await loadVersions(t);if(t!==token)return;await loadId(id,t)});
 $('schedulePrint').onclick=()=>{if(s){document.body.classList.add('printing-schedule');try{window.print()}finally{document.body.classList.remove('printing-schedule')}}};
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
-window.SchedulerPage={open,reset,staffTab,hasUnsaved:()=>dirty};
+window.SchedulerPage={open,reset,staffTab,hasUnsaved:()=>dirty,isBusy:()=>busy};
 })();
