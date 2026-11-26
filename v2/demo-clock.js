@@ -1,0 +1,2 @@
+/* Only loaded by demo.html; no real system date or auth changes. */
+(function(){const RealDate=Date, fixed=RealDate.parse('2026-12-15T22:00:00+07:00');class DemoDate extends RealDate{constructor(...a){super(...(a.length?a:[fixed]))}static now(){return fixed}}window.Date=DemoDate})();
