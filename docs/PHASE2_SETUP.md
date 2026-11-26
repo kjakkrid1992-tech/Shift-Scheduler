@@ -1,6 +1,6 @@
 
 # Phase 2 — Shift Scheduler integration (pilot)
-- Apply 20261126000300_scheduler.sql once after both Foundation migrations. Existing users and staff remain unchanged. Creates pay_periods, shift_schedules, shift_assignments with read-only direct API grants and role-checked RPC writes.
+- Apply 20261126000300_scheduler.sql once after both Foundation migrations. Then apply 20261126000400_scheduler_alias_fix.sql. Existing users and staff remain unchanged. Creates pay_periods, shift_schedules, shift_assignments with read-only direct API grants and role-checked RPC writes.
 - Download latest development-v2, start local server at repo root and sign in. New menu: จัดตารางกะ. Select department and MM/YYYY (CE), click เปิดตาราง / สร้างร่าง. December 2026 is 26/11–25/12.
 - Use synthetic employees only; no automatic migration of LocalStorage or Excel. Add two or three test staff in same department, ensure dates cover period; assign synthetic rates if testing estimated earnings.
 - Select staff for automatic generation; set weekly off days and leave dates (click ใช้วันลา). These are version-scoped availability constraints, not approved HR leave records.
@@ -12,3 +12,5 @@
 - SQL tests: run supabase/tests/scheduler.sql in test project after migration, rolls back synthetic rows. JS engine tests: node tests/schedule-engine.test.js. Browser + live SQL tests must pass before merging or production.
 
 - Pilot limits: maximum 10 active templates and 500 rows per schedule. SQL test also verifies weekly off and leave cannot be confirmed. Table edits disabled during save; direct database confirmation checks both date restrictions.
+
+- Existing pilot with Phase 2 tables already installed: apply only the 00400 function replacement. Do not rerun 00300. Rerun scheduler.sql after patch; includes an explicit unacknowledged-overlap regression check if the configured templates overlap.

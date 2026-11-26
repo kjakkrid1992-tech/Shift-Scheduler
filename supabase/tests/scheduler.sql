@@ -36,6 +36,13 @@ begin
   perform public.save_shift_schedule(sid,1,payload,jsonb_build_object(job::text,jsonb_build_object('off_days','[]'::jsonb,'leave_dates',jsonb_build_array('2098-01-26'))),true,true);
   raise exception 'FAIL leave date allowed';
  exception when raise_exception then if sqlerrm<>'Assigned employee is unavailable' then raise;end if;end;
+ -- Explicitly exercise the overlap check with acknowledgement disabled.
+ if exists(select 1 from public.shift_assignments a join public.shift_assignments other_slot on a.schedule_id=other_slot.schedule_id and a.id<other_slot.id and a.employment_id=other_slot.employment_id where a.schedule_id=sid and tstzrange(a.planned_start,a.planned_end,'[)') && tstzrange(other_slot.planned_start,other_slot.planned_end,'[)')) then
+  begin
+   perform public.save_shift_schedule(sid,1,payload,'{}',true,false);
+   raise exception 'FAIL unacknowledged overlap allowed';
+  exception when raise_exception then if sqlerrm<>'Overlapping shifts require explicit acknowledgement' then raise;end if;end;
+ end if;
  rev:=public.save_shift_schedule(sid,1,payload,'{}',true,true);
  if rev<>2 or not exists(select 1 from public.shift_schedules where id=sid and status='confirmed') then raise exception 'Confirm failed';end if;
  begin
