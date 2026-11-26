@@ -28,7 +28,7 @@ async function open(client,staff,departments){
  $('scheduleMonth').value=next.slice(5)+'/'+next.slice(0,4);setTab(false);hide('scheduleContent');notify('เลือกรอบเดือนและแผนก แล้วกดเปิดตาราง');
 }
 async function run(fn){if(busy||!db)return;busy=true;const t=token;setBusy(true);try{await fn(t)}catch(e){if(t===token)notify(e.message||'เกิดข้อผิดพลาด',true)}finally{if(t===token){busy=false;setBusy(false)}}}
-function setBusy(on){$('scheduleContent').inert=on;for(const id of ['scheduleReload','scheduleOpen','scheduleVersions','scheduleMonth','scheduleDept','scheduleSave','scheduleConfirm','scheduleRevise','scheduleAuto','scheduleClear','tabStaff','tabSchedule','tabAttendance','tabAdvance','logout'])$(id).disabled=on; if(!on)renderControls()}
+function setBusy(on){$('scheduleContent').inert=on;for(const id of ['scheduleReload','scheduleOpen','scheduleVersions','scheduleMonth','scheduleDept','scheduleSave','scheduleConfirm','scheduleRevise','scheduleAuto','scheduleClear','tabStaff','tabSchedule','tabAttendance','tabAdvance','tabPayroll','logout'])$(id).disabled=on; if(!on)renderControls()}
 function renderControls(){const draft=s?.status==='draft';hide('scheduleControls',!draft);hide('scheduleSave',!draft);hide('scheduleConfirm',!draft);hide('scheduleRevise',!(s?.status==='confirmed'&&versions[0]?.id===s.id));$('scheduleVersions').disabled=!versions.length;}
 async function loadVersions(t){
  const q=unwrap(await db.from('pay_periods').select('id').eq('start_date',range.start).maybeSingle());if(t!==token)return;
