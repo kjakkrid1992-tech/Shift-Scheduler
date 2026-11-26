@@ -1,0 +1,29 @@
+{
+  "format": "baanjergun-legacy-payroll-v1",
+  "source_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "records": [
+    {
+      "sheet": "DEMO · นำเข้าตัวอย่าง",
+      "row": 10,
+      "period_label": "สิงหาคม 2569",
+      "recorded_date": "2026-08-25",
+      "source_name": "ฟ้า ตัวอย่าง",
+      "position": "แคชเชียร์",
+      "income_satang": 900000,
+      "deduction_satang": 50000,
+      "net_satang": 850000,
+      "lines": [
+        {
+          "side": "income",
+          "label": "ค่าแรง",
+          "amount_satang": 900000
+        },
+        {
+          "side": "deduction",
+          "label": "เงินเบิก",
+          "amount_satang": 50000
+        }
+      ]
+    }
+  ]
+}

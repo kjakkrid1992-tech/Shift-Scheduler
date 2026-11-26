@@ -67,3 +67,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Browser smoke using generated Tailwind CSS
         run: node tests/m3-browser.cjs
+      - name: Demo all-menu smoke (offline fixture)
+        run: node tests/demo-browser.cjs
