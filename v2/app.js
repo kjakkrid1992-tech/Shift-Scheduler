@@ -31,7 +31,7 @@ function render(){
     if(q&&![e.employee_code,e.first_name,e.last_name,e.nickname,j?.position].join(' ').toLowerCase().includes(q))continue;
     const tr=text('tr',''),name=text('td',e.employee_code+' · '+e.first_name+' '+e.last_name);
     if(e.nickname)name.append(text('small',e.nickname));
-    const status=text('td',statusNames[j?.status]||'ไม่มีการจ้าง');
+    const status=text('td',statusNames[j?.status]||'ทะเบียนบุคคล / ยังไม่มีการจ้าง');
     if(isOpen&&j.start_date>today)status.append(text('small','เริ่มงาน '+displayDate(j.start_date)));
     const rate=text('td',isOpen&&j.start_date<=today&&r.current?money(r.current.base_rate)+' บาท/'+payUnit[j.employment_type]:isOpen&&!r.current?'ยังไม่มีเรท':'—');
     if(isOpen&&!r.current)rate.className='warning-text';
