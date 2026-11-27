@@ -4,7 +4,13 @@
 // Requires Node.js LTS, local Docker-compatible runtime and standalone Supabase CLI.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),{spawnSync}=require('node:child_process'),{randomBytes}=require('node:crypto'),R=require('../v8/runtime-config.js'),G=require('./local-v8-guard.cjs');
 const root=path.resolve(__dirname,'..'),work=path.join(root,'local-v8-runtime'),tools=path.join(root,'.v8-test-tools'),publicDir=path.join(root,'v8');
-function run(cmd,args,{cwd=work,capture=false}={}){const q=spawnSync(cmd,args,{cwd,env:cmd==='supabase'?G.localSupabaseEnv(process.env):process.env,encoding:'utf8',maxBuffer:8*1024*1024,stdio:capture?['ignore','pipe','pipe']:'inherit'});if(q.error||q.status!==0)throw Error(cmd+' '+args[0]+' failed. Check local prerequisites and CLI output. '+(q.error?.message||''));return capture?q.stdout:''}
+const optionalServices=['realtime','storage-api','imgproxy','mailpit','postgres-meta','studio','edge-runtime','logflare','vector','supavisor'];
+function run(cmd,args,{cwd=work,capture=false,discardStdout=false}={}){
+ const stdio=capture?['ignore','pipe','pipe']:discardStdout?['ignore','ignore','inherit']:'inherit';
+ const q=spawnSync(cmd,args,{cwd,env:cmd==='supabase'?G.localSupabaseEnv(process.env):process.env,encoding:'utf8',maxBuffer:8*1024*1024,stdio});
+ if(q.error||q.status!==0)throw Error(cmd+' '+args[0]+' failed. Check local prerequisites and CLI output. '+(q.error?.message||''));
+ return capture?q.stdout:'';
+}
 function cli(args,capture=false){return run('supabase',args,{capture})}
 function npm(args){if(process.platform==='win32'){const p=path.join(path.dirname(process.execPath),'node_modules','npm','bin','npm-cli.js');if(!fs.existsSync(p))throw Error('Node.js with npm is required.');return run(process.execPath,[p,...args],{cwd:root})}return run('npm',args,{cwd:root})}
 function localWork(){
@@ -63,9 +69,13 @@ function serve(config,sdk){
  }catch{res.writeHead(500);res.end('Local server error')}});server.on('error',e=>{console.error('Local port 5501 unavailable: '+e.message);process.exitCode=1});server.listen(5501,'127.0.0.1',()=>console.log('V8 LOCAL: http://127.0.0.1:5501/v8/ — Ctrl+C stops only the web server.'));
 }
 async function main(){
- if(process.argv.length!==2)throw Error('Usage: node scripts/start-v8-local.cjs');
+ const flags=process.argv.slice(2),coreOnly=flags[0]==='--core-only';
+ if(flags.length&&(!coreOnly||flags.length>1))throw Error('Usage: node scripts/start-v8-local.cjs [--core-only]');
  G.assertDockerLocal();run('docker',['info','--format','{{.ServerVersion}}'],{cwd:root});run('supabase',['--version'],{cwd:root});
- localWork();console.log('Starting local Supabase stack (no cloud project).');cli(['start'],true);
+ localWork();console.log('Starting local Supabase stack (no cloud project).');
+ const startArgs=coreOnly?['start','--exclude',optionalServices.join(',')]:['start'];
+ // Show startup progress and errors without printing the CLI status table with database keys.
+ run('supabase',startArgs,{discardStdout:true});
  const status=JSON.parse(cli(['status','-o','json'],true)),config=validateStatus(status);
  // Check migration before creating accounts. No reset or cloud link.
  localQuery("do $$ begin if to_regprocedure('public.v8_workspace_capabilities()') is null or to_regprocedure('public.save_attendance_period(date,uuid,text,jsonb)') is null or to_regprocedure('public.save_payroll_period_drafts(date,jsonb)') is null then raise exception 'V8 migration missing in local runtime';end if;end $$;");
